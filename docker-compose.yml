@@ -38,6 +38,8 @@ services:
     environment:
       API_URL: http://backend:8000
       APP_AUTH_PASSWORD: ${APP_AUTH_PASSWORD:-}
+      APP_AUTH_USERS_B64: ${APP_AUTH_USERS_B64:-}
+      APP_SESSION_SECRET: ${APP_SESSION_SECRET:-}
     ports:
       - "127.0.0.1:${APP_PORT:-3000}:3000"
     depends_on:
