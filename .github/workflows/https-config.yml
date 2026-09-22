@@ -1,0 +1,27 @@
+name: Optional HTTPS configuration
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - Caddyfile
+      - docker-compose.https.yml
+      - .github/workflows/https-config.yml
+  push:
+    branches: [main]
+    paths:
+      - Caddyfile
+      - docker-compose.https.yml
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      POSTGRES_PASSWORD: ci-only
+      APP_HOSTNAME: maintenance.home.arpa
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose overlay
+        run: docker compose -f docker-compose.yml -f docker-compose.https.yml config >/dev/null
+      - name: Validate Caddyfile
+        run: docker run --rm -e APP_HOSTNAME=maintenance.home.arpa -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
