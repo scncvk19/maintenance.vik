@@ -129,6 +129,26 @@ class Residence(Base):
     notes: Mapped[str] = mapped_column(Text, default="")
 
 
+class TrashItem(Base):
+    __tablename__ = "trash_items"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    resource: Mapped[str] = mapped_column(String(60))
+    record_id: Mapped[str] = mapped_column(String(36))
+    label: Mapped[str] = mapped_column(String(255), default="")
+    payload: Mapped[str] = mapped_column(Text)
+    deleted_at: Mapped[str] = mapped_column(String(40))
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_log"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    action: Mapped[str] = mapped_column(String(30))
+    resource: Mapped[str] = mapped_column(String(60))
+    record_id: Mapped[str] = mapped_column(String(36), default="")
+    label: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[str] = mapped_column(String(40))
+
+
 class TaxVault(Base):
     __tablename__ = "tax_vault"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
