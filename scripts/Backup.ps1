@@ -2,11 +2,14 @@
 # Windows PowerShell 5.1 und PowerShell 7; keine zusaetzlichen Module.
 [CmdletBinding()]
 param(
-    [string]$Destination = (Join-Path (Split-Path -Parent $PSScriptRoot) 'backups')
+    [string]$Destination
 )
 
 $ErrorActionPreference = 'Stop'
 $project = Split-Path -Parent $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($Destination)) {
+    $Destination = Join-Path $project 'backups'
+}
 $temporary = $null
 $archive = $null
 $sha = [System.Security.Cryptography.SHA256]::Create()
