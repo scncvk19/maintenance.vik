@@ -2,14 +2,13 @@
 # Windows PowerShell 5.1 und PowerShell 7; keine zusaetzlichen Module.
 [CmdletBinding()]
 param(
-    [string]$Destination
+    [string]$Destination,
+    [System.Management.Automation.PSCredential]$Credential
 )
 
 $ErrorActionPreference = 'Stop'
 $project = Split-Path -Parent $PSScriptRoot
-if ([string]::IsNullOrWhiteSpace($Destination)) {
-    $Destination = Join-Path $project 'backups'
-}
+if (-not $Destination) { $Destination = Join-Path $project 'backups' }
 $temporary = $null
 $archive = $null
 $sha = [System.Security.Cryptography.SHA256]::Create()
@@ -30,7 +29,20 @@ try {
     $final = Join-Path $target $name
     $temporary = Join-Path $target ('.' + $name + '.partial')
     $uri = 'http://127.0.0.1:{0}/api/backup/export' -f $port
-    Invoke-WebRequest -Uri $uri -OutFile $temporary -UseBasicParsing -TimeoutSec 180 | Out-Null
+    $request = @{ Uri = $uri; OutFile = $temporary; UseBasicParsing = $true; TimeoutSec = 180 }
+    if ($null -ne $Credential) {
+        if ($Credential.UserName -ne 'admin') { throw 'Fuer das Backup den Benutzernamen admin verwenden.' }
+        $credentials = 'admin:' + $Credential.GetNetworkCredential().Password
+        $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($credentials))
+        $request['Headers'] = @{ Authorization = 'Basic ' + $encoded }
+    }
+    try { Invoke-WebRequest @request | Out-Null }
+    catch {
+        if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 401) {
+            throw 'Backup-Zugriff gesperrt. Mit -Credential (Get-Credential -UserName admin) erneut starten.'
+        }
+        throw
+    }
     if ((Get-Item -LiteralPath $temporary).Length -eq 0) { throw 'Backup ist leer.' }
 
     Add-Type -AssemblyName System.IO.Compression
