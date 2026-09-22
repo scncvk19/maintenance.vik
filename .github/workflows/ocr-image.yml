@@ -1,0 +1,28 @@
+name: Local OCR image
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/Dockerfile'
+      - 'backend/app/document_analysis.py'
+      - '.github/workflows/ocr-image.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/Dockerfile'
+      - 'backend/app/document_analysis.py'
+permissions:
+  contents: read
+jobs:
+  ocr-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build isolated backend image
+        run: docker build -t maintenance-ocr-ci backend
+      - name: Check installed OCR and PDF tools without user data
+        run: |
+          docker run --rm --entrypoint tesseract maintenance-ocr-ci --list-langs | tee /tmp/ocr-langs.txt
+          grep -Fxq deu /tmp/ocr-langs.txt
+          grep -Fxq eng /tmp/ocr-langs.txt
+          docker run --rm --entrypoint pdftotext maintenance-ocr-ci -v
