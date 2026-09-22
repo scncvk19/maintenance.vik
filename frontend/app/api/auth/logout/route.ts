@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sessionCookieName } from '../../../lib/auth';
+import { sessionCookieName } from '../../../../lib/auth';
 
 export const runtime = 'nodejs';
 
