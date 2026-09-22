@@ -31,6 +31,21 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'N:\maintenance.vik\scri
 
 Ohne `APP_AUTH_PASSWORD` bleibt das bisherige lokale Verhalten bestehen. Für einen späteren Mehrbenutzerbetrieb sind serverseitige Authentifizierung, Rollen und Session-Verwaltung weiterhin offen.
 
+## Lokale Dokumentanalyse / OCR
+
+PDFs, Bilder, TXT, CSV und DOCX können direkt in der Dokumentenübersicht mit **Lokal analysieren** ausgewertet werden. OCR läuft ausschließlich im Backend-Container mit Tesseract/Poppler; Dokumentinhalte werden nicht an Cloud-Dienste gesendet. Ein erkannter Kategorienvorschlag wird erst nach ausdrücklicher Bestätigung gespeichert.
+
+## Telegram-Erinnerungen
+
+Telegram ist standardmäßig **deaktiviert**. Für einen Test einen eigenen Bot bei Telegram erstellen und in der lokalen `.env` ergänzen:
+
+```text
+TELEGRAM_BOT_TOKEN=<dein Bot-Token>
+TELEGRAM_SEND_ENABLED=YES_I_CONFIGURED_THE_BOT
+```
+
+Danach die Container neu erstellen. In **Einstellungen & Backup → Telegram** zuerst die Vorschau laden. Der Versand überträgt nur Anzahlen fälliger Aufgaben/Wartungen, Verträge und Dokumenterinnerungen; keine Titel, Adressen, Beträge oder Steuerinhalte. Doppelte Sendungen an denselben Chat werden pro Kalendertag unterdrückt.
+
 ## Funktionsbereiche
 
 - Immobilien, Grundstücke, Fahrzeuge und technische Anlagen
