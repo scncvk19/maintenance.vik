@@ -1,0 +1,49 @@
+name: Large offline backup (disposable CI)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/Backup-Large.ps1'
+      - 'scripts/Verify-LargeBackup.ps1'
+      - '.github/workflows/large-backup.yml'
+      - 'backend/Dockerfile'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/Backup-Large.ps1'
+      - 'scripts/Verify-LargeBackup.ps1'
+      - 'backend/Dockerfile'
+permissions:
+  contents: read
+jobs:
+  bulk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      POSTGRES_PASSWORD: ci-only-not-a-real-password
+      APP_PORT: '3299'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start disposable, isolated Compose project
+        run: docker compose -p maintenance-vik-offline-ci up -d --build --wait --wait-timeout 300
+      - name: Generate disposable document larger than legacy ZIP limit
+        run: |
+          backend_id=$(docker compose -p maintenance-vik-offline-ci ps -q backend)
+          docker exec "$backend_id" python -c "import os,pathlib; p=pathlib.Path('/data/uploads') / ('a'*64); f=p.open('wb'); [(f.write(os.urandom(4*1024*1024))) for _ in range(65)]; f.close()"
+      - name: Export and validate offline backup using PowerShell
+        shell: pwsh
+        run: |
+          ./scripts/Backup-Large.ps1 -ComposeProject maintenance-vik-offline-ci -Destination "$env:RUNNER_TEMP/bulk"
+          $folder = Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/bulk" -Directory | Where-Object { $_.Name -notlike '.*.partial' } | Select-Object -First 1
+          if (-not $folder) { throw 'Kein fertiges Offline-Backup gefunden.' }
+          ./scripts/Verify-LargeBackup.ps1 -BackupDirectory $folder.FullName
+          $large = Get-Item -LiteralPath (Join-Path $folder.FullName ('data/uploads/' + ('a' * 64)))
+          if ($large.Length -le 250MB) { throw 'Große Testdatei fehlt oder ist zu klein.' }
+          $services = docker compose -p maintenance-vik-offline-ci ps --status running --services
+          if ($services -notcontains 'backend' -or $services -notcontains 'frontend') { throw 'Anwendung wurde nach Backup nicht wieder gestartet.' }
+      - name: Inspect services on failure
+        if: failure()
+        run: docker compose -p maintenance-vik-offline-ci ps
+      - name: Remove only disposable CI containers and volumes
+        if: always()
+        run: docker compose -p maintenance-vik-offline-ci down -v --remove-orphans
