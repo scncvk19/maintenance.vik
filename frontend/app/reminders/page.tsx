@@ -21,7 +21,15 @@ export default function ReminderPage() {
     try { setPreview(await api<Preview>('notifications/preview')); setError(''); }
     catch (cause) { setError((cause as Error).message); }
   }
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => {
+    let active = true;
+    void api<Preview>('notifications/preview').then(data => {
+      if (active) setPreview(data);
+    }).catch(cause => {
+      if (active) setError((cause as Error).message);
+    });
+    return () => { active = false; };
+  }, []);
   async function send() {
     if (!preview || !preview.configured || !preview.telegram_recipients) return;
     if (!window.confirm('Jetzt eine Telegram-Nachricht mit den angezeigten Anzahlen an die aktiven Empfänger senden?')) return;
