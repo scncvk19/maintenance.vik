@@ -10,6 +10,27 @@ Lokale Webanwendung für Immobilien, Fahrzeuge, technische Anlagen, Termine und 
 
 Beim ersten Start erzeugt die Anwendung eine lokale `.env`-Datei mit einem zufälligen Datenbankpasswort. Diese Datei, die Datenbank und hochgeladene Dokumente bleiben lokal und werden nicht in Git übernommen.
 
+## Lokale Benutzerkonten (empfohlen)
+
+maintenance.vik kann mehrere lokale Konten mit den Rollen **admin** und **viewer** verwenden. Passwörter werden als PBKDF2-SHA256-Hash mit zufälligem Salt in der lokalen `.env` gespeichert; Klartextpasswörter werden nicht gespeichert. Sitzungen laufen über signierte HttpOnly-Cookies und enden nach 12 Stunden.
+
+Benutzer anlegen oder aktualisieren:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "N:\maintenance.vik\scripts\Set-AppUser.ps1" -UserName sercan -Role admin
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "N:\maintenance.vik\scripts\Set-AppUser.ps1" -UserName leser -Role viewer
+```
+
+Danach Container neu erstellen:
+
+```powershell
+docker compose --project-directory "N:\maintenance.vik" up -d --build
+```
+
+Anmeldung erfolgt anschließend unter `/login`. **admin** darf lesen und ändern. **viewer** darf normale Daten lesen, aber keine Änderungen, Backups oder Steuerbereiche aufrufen. Abmelden: `/logout`.
+
+Die Kontenfunktion hat Vorrang vor dem älteren `APP_AUTH_PASSWORD`. Wenn keine lokalen Konten konfiguriert sind, bleibt der bisherige optionale Basic-Auth-Modus kompatibel.
+
 ## Optionaler Zugriffsschutz (ein Benutzer)
 
 Die Anwendung ist standardmäßig nur an `127.0.0.1` gebunden. Für einen zusätzlichen Passwortschutz `APP_AUTH_PASSWORD=` mit einem **eigenen, langen Passwort** in die lokale `.env` eintragen (ohne Anführungszeichen, keine Zeilenumbrüche) und die Container neu erstellen:
