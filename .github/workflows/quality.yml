@@ -48,5 +48,18 @@ jobs:
       - name: Production build
         run: npm run build
 
+  backup-script:
+    name: PowerShell backup syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse backup script without executing it
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'scripts/Backup.ps1'), [ref]$tokens, [ref]$parseErrors)
+          if ($parseErrors.Count -gt 0) { $parseErrors | Format-List | Out-String | Write-Error; exit 1 }
+
 # The Playwright test which restores a backup is intentionally NOT run here:
 # it replaces all application records and requires a dedicated disposable deployment.
