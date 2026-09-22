@@ -31,6 +31,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'N:\maintenance.vik\scri
 
 Ohne `APP_AUTH_PASSWORD` bleibt das bisherige lokale Verhalten bestehen. Für einen späteren Mehrbenutzerbetrieb sind serverseitige Authentifizierung, Rollen und Session-Verwaltung weiterhin offen.
 
+## Optionales HTTPS
+
+Für LAN-/VPN-Zugriff gibt es einen optionalen Caddy-Reverse-Proxy mit interner TLS-CA. Der normale `localhost:3000`-Start bleibt unverändert. Einrichtung und Zertifikats-Hinweise: `docs/https.md`.
+
 ## Funktionsbereiche
 
 - Immobilien, Grundstücke, Fahrzeuge und technische Anlagen
