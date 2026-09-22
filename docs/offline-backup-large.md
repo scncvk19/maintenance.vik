@@ -16,4 +16,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "N:\maintenance.vik-test
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "N:\maintenance.vik-test\scripts\Verify-LargeBackup.ps1" -BackupDirectory "E:\maintenance-vik-test-backups\maintenance-vik-offline-<Zeitstempel>"
 ```
 
-Der Backup-Ordner **ist nicht** mit `/api/backup/import` kompatibel. Ein Restore benötigt eine **separate, frische PostgreSQL-/Dokumenten-Testinstallation**, `pg_restore` und eine kontrollierte Kopie der `data/`-Dateien. Keinesfalls `pg_restore --clean` gegen die laufende Datenbank oder den bestehenden Dokumentenbestand ausführen. Die tatsächliche Windows-Wiederherstellbarkeit muss vor produktiver Nutzung gesondert nachgewiesen werden. Bei Verwendung einer externen Festplatte sensible Dokumente und Datenbank-Dumps mit geeignetem Zugriffsschutz/Verschlüsselung sichern.
+Der Backup-Ordner **ist nicht** mit `/api/backup/import` kompatibel. Für eine **separate Testinstallation** steht `scripts/Restore-Large.ps1` bereit. Das Skript verweigert absichtlich den normalen Compose-Projektnamen `maintenance-vik` und akzeptiert nur Projektnamen mit Suffix `-test`. Zusätzlich ist die exakte Bestätigung `RESTORE_ISOLATED_TEST` erforderlich.
+
+Beispiel ausschließlich für die getrennte Testkopie:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "N:\maintenance.vik-test\scripts\Restore-Large.ps1" \
+  -BackupDirectory "E:\maintenance-vik-test-backups\maintenance-vik-offline-<Zeitstempel>" \
+  -ComposeProject maintenance-vik-test \
+  -Confirmation RESTORE_ISOLATED_TEST
+```
+
+Der Restore ersetzt Datenbank und Dokumentenvolume **dieser Testinstanz**. Niemals einen Produktivnamen umbenennen oder die Schutzprüfung umgehen. GitHub Actions prüft denselben Ablauf mit zwei vollständig getrennten Wegwerf-Compose-Projekten, inklusive einer Datei größer als 250 MB. Ein erfolgreicher CI-Restore ersetzt trotzdem nicht den morgigen Windows-Test. Bei Verwendung einer externen Festplatte sensible Dokumente und Datenbank-Dumps mit geeignetem Zugriffsschutz/Verschlüsselung sichern.
