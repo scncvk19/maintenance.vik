@@ -18,7 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from .backup import MAX_BACKUP, export_backup, record, restore_backup, validate_backup
 from .database import Session, UPLOADS, data_lock, engine
 from .integrations import INTEGRATIONS
-from .models import Asset, Base, Component, Contract, Document, DocumentInput, Person, RESOURCES, TaxAttachment, TaxCase, TaxVault, Transaction, WorkItem
+from .models import ActivityLog, Asset, Base, Component, Contract, Document, DocumentInput, Person, RESOURCES, TaxAttachment, TaxCase, TaxVault, Transaction, TrashItem, WorkItem
 
 
 TAX_SESSIONS: dict[str, tuple[bytes, datetime]] = {}
@@ -106,6 +106,34 @@ async def lifespan(app):
 
 
 app = FastAPI(title="maintenance.vik", version="0.1.0", lifespan=lifespan)
+
+
+def activity_label(row, fallback: str = "") -> str:
+    return str(getattr(row, "name", "") or getattr(row, "title", "") or getattr(row, "label", "") or getattr(row, "filename", "") or fallback)[:255]
+
+
+def log_activity(session, action: str, resource_name: str, record_id: str, label: str = ""):
+    session.add(ActivityLog(
+        id=str(uuid4()), action=action, resource=resource_name, record_id=record_id,
+        label=label[:255], created_at=datetime.now(timezone.utc).isoformat()
+    ))
+
+
+def snapshot_value(model, payload: dict):
+    values = {}
+    for column in model.__table__.columns:
+        if column.name not in payload:
+            continue
+        value = payload[column.name]
+        if value is not None:
+            try:
+                if column.type.python_type is date and isinstance(value, str):
+                    value = date.fromisoformat(value)
+            except (NotImplementedError, AttributeError):
+                pass
+        values[column.name] = value
+    return model(**values)
+
 
 
 def resource(name):
@@ -668,6 +696,7 @@ def save_record(name, payload, record_id=None):
                 follow_up = values | {"status": "open", "due_date": max(row.due_date, date.today()) + timedelta(days=row.interval_days)}
                 session.add(WorkItem(id=str(uuid4()), **follow_up))
         session.add(row)
+        log_activity(session, "updated" if record_id else "created", name, row.id, activity_label(row, name))
         session.commit()
         return record(row)
 
@@ -689,27 +718,36 @@ def remove(name: str, record_id: str, cascade: bool = Query(False)):
         row = session.get(model, record_id)
         if not row:
             raise HTTPException(404, "Eintrag nicht gefunden")
+        label = activity_label(row, name)
         if name == "assets" and cascade:
             dependencies = asset_dependencies(session, record_id)
-            document_keys = [item["storage_key"] for item in dependencies["documents"]]
+            snapshot = {"record": record(row), "groups": dependencies}
+            session.add(TrashItem(
+                id=str(uuid4()), resource=name, record_id=record_id, label=label,
+                payload=json.dumps(snapshot, ensure_ascii=False), deleted_at=datetime.now(timezone.utc).isoformat()
+            ))
             for dependent_model in (Contract, Document, Transaction, WorkItem, Component):
                 session.execute(delete(dependent_model).where(dependent_model.asset_id == record_id))
             session.delete(row)
+            log_activity(session, "deleted", name, record_id, label)
             try:
                 session.commit()
             except IntegrityError as exc:
                 session.rollback()
                 raise HTTPException(409, "Verknüpfungen konnten nicht vollständig entfernt werden.") from exc
-            with Session() as cleanup_session:
-                for key in document_keys:
-                    if not cleanup_session.scalar(select(func.count()).select_from(Document).where(Document.storage_key == key)):
-                        (UPLOADS / key).unlink(missing_ok=True)
             return
+        snapshot = {"record": record(row)}
         if name == "documents":
+            snapshot["cover_asset_ids"] = [asset.id for asset in session.scalars(select(Asset).where(Asset.cover_document_id == record_id))]
             for asset in session.scalars(select(Asset).where(Asset.cover_document_id == record_id)):
                 asset.cover_document_id = None
                 session.add(asset)
+        session.add(TrashItem(
+            id=str(uuid4()), resource=name, record_id=record_id, label=label,
+            payload=json.dumps(snapshot, ensure_ascii=False), deleted_at=datetime.now(timezone.utc).isoformat()
+        ))
         session.delete(row)
+        log_activity(session, "deleted", name, record_id, label)
         try:
             session.commit()
         except IntegrityError as exc:
@@ -718,6 +756,79 @@ def remove(name: str, record_id: str, cascade: bool = Query(False)):
                 dependencies = asset_dependencies(session, record_id)
                 raise HTTPException(409, {"message": "Es bestehen Verknüpfungen.", "dependencies": dependencies}) from exc
             raise HTTPException(409, "Es bestehen Verknüpfungen. Bitte zuerst die zugeordneten Einträge entfernen.") from exc
+
+
+@app.get("/trash")
+def list_trash():
+    with data_lock, Session() as session:
+        items = session.scalars(select(TrashItem).order_by(TrashItem.deleted_at.desc())).all()
+        return [{"id": item.id, "resource": item.resource, "record_id": item.record_id, "label": item.label, "deleted_at": item.deleted_at} for item in items]
+
+
+@app.post("/trash/{trash_id}/restore")
+def restore_trash(trash_id: str):
+    with data_lock, Session() as session:
+        item = session.get(TrashItem, trash_id)
+        if not item:
+            raise HTTPException(404, "Papierkorb-Eintrag nicht gefunden")
+        snapshot = json.loads(item.payload)
+        model, _ = resource(item.resource)
+        if session.get(model, item.record_id):
+            raise HTTPException(409, "Ein Eintrag mit derselben ID existiert bereits.")
+        try:
+            if item.resource == "assets" and "groups" in snapshot:
+                session.add(snapshot_value(Asset, snapshot["record"]))
+                groups = snapshot["groups"]
+                restore_order = [
+                    ("components", Component), ("documents", Document), ("work_items", WorkItem),
+                    ("transactions", Transaction), ("contracts", Contract),
+                ]
+                for group, group_model in restore_order:
+                    for row_data in groups.get(group, []):
+                        session.add(snapshot_value(group_model, row_data))
+            else:
+                session.add(snapshot_value(model, snapshot["record"]))
+                if item.resource == "documents":
+                    for asset_id in snapshot.get("cover_asset_ids", []):
+                        asset = session.get(Asset, asset_id)
+                        if asset:
+                            asset.cover_document_id = item.record_id
+                            session.add(asset)
+            session.delete(item)
+            log_activity(session, "restored", item.resource, item.record_id, item.label)
+            session.commit()
+        except IntegrityError as exc:
+            session.rollback()
+            raise HTTPException(409, "Wiederherstellung nicht möglich, weil benötigte Verknüpfungen fehlen.") from exc
+        return {"restored": True}
+
+
+@app.delete("/trash/{trash_id}", status_code=204)
+def purge_trash(trash_id: str):
+    with data_lock, Session() as session:
+        item = session.get(TrashItem, trash_id)
+        if not item:
+            raise HTTPException(404, "Papierkorb-Eintrag nicht gefunden")
+        snapshot = json.loads(item.payload)
+        keys = []
+        if item.resource == "documents":
+            keys.append(snapshot.get("record", {}).get("storage_key"))
+        if item.resource == "assets":
+            keys.extend(row.get("storage_key") for row in snapshot.get("groups", {}).get("documents", []))
+        session.delete(item)
+        log_activity(session, "purged", item.resource, item.record_id, item.label)
+        session.commit()
+        for key in {key for key in keys if key}:
+            if not session.scalar(select(func.count()).select_from(Document).where(Document.storage_key == key)):
+                if not any(key in trash.payload for trash in session.scalars(select(TrashItem))):
+                    (UPLOADS / key).unlink(missing_ok=True)
+
+
+@app.get("/activity")
+def list_activity(limit: int = Query(100, ge=1, le=500)):
+    with data_lock, Session() as session:
+        rows = session.scalars(select(ActivityLog).order_by(ActivityLog.created_at.desc()).limit(limit)).all()
+        return [{"id": row.id, "action": row.action, "resource": row.resource, "record_id": row.record_id, "label": row.label, "created_at": row.created_at} for row in rows]
 
 
 @app.post("/seed", status_code=201)
