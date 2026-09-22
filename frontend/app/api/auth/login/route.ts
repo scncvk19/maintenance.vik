@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSession, multiUserEnabled, sessionCookieName, verifyCredentials } from '../../../lib/auth';
+import { createSession, multiUserEnabled, sessionCookieName, verifyCredentials } from '../../../../lib/auth';
 
 export const runtime = 'nodejs';
 
