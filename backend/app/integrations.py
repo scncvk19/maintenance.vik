@@ -22,5 +22,5 @@ class NotificationChannel(Protocol):
 INTEGRATIONS = [
     {"name": "Dokumentenanalyse / OCR", "status": "available", "description": "Lokale OCR/Textanalyse verfügbar. Vorschläge werden nie automatisch gespeichert und müssen bestätigt werden."},
     {"name": "Telegram", "status": "available", "description": "Datensparsamer Erinnerungsversand verfügbar; Aktivierung erfordert Bot-Token und ausdrückliche Freigabe."},
-    {"name": "WhatsApp", "status": "planned", "description": "Später über einen zusätzlichen Benachrichtigungskanal."},
+    {"name": "WhatsApp", "status": "available", "description": "Optionaler Templateversand über die WhatsApp Cloud API; ohne lokale Provider-Konfiguration deaktiviert."},
 ]
