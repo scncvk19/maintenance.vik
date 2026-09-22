@@ -71,6 +71,10 @@ Danach die Container neu erstellen. In **Einstellungen & Backup → Telegram** z
 
 Ein datensparsamer WhatsApp-Cloud-API-Kanal ist optional verfügbar und standardmäßig deaktiviert. Er verwendet ein freigegebenes Template und überträgt nur Erinnerungsanzahlen. Einrichtung: `docs/whatsapp.md`.
 
+## Optionales HTTPS
+
+Für LAN-/VPN-Zugriff gibt es einen optionalen Caddy-Reverse-Proxy mit interner TLS-CA. Der normale `localhost:3000`-Start bleibt unverändert. Einrichtung und Zertifikats-Hinweise: `docs/https.md`.
+
 ## Funktionsbereiche
 
 - Immobilien, Grundstücke, Fahrzeuge und technische Anlagen
