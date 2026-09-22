@@ -1,0 +1,24 @@
+name: Backup script runtime
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/Backup.ps1
+      - scripts/Test-Backup.ps1
+      - .github/workflows/backup-runtime.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/Backup.ps1
+      - scripts/Test-Backup.ps1
+      - .github/workflows/backup-runtime.yml
+permissions:
+  contents: read
+jobs:
+  backup-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test backup startup with mocked Docker and HTTP
+        shell: pwsh
+        run: ./scripts/Test-Backup.ps1
