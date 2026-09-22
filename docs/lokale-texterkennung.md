@@ -1,0 +1,7 @@
+# Lokale Texterkennung – kontrollierte Vorschau
+
+Unter `/document-analysis` kann ein **bereits hochgeladenes Dokument** bewusst zur Texterkennung ausgewählt werden. Die Analyse erfolgt im Backend-Container mit Tesseract (Deutsch/Englisch) und Poppler. Es werden **keine Cloud-, KI- oder externen OCR-APIs** aufgerufen. Die PDF-Textextraktion wird zuerst versucht; bei Scans wird OCR auf höchstens die ersten drei PDF-Seiten angewandt. Bilder (PNG/JPG/WEBP), TXT, CSV und DOCX werden unterstützt. XLSX ist derzeit nicht analysierbar.
+
+**Grenzen:** maximal 10 MB pro Dokument, 1.800 Zeichen Vorschau, Zeitlimits für lokale Prozesse. Schlechte Scanqualität, handschriftliche Texte und zusammengesetzte Wörter können falsch erkannt werden. Kategorien sind regelbasierte Vorschläge, keine verlässlichen Steuer- oder Vertragsentscheidungen. Bestehende Kategorie, Notizen, Dokument und Backup bleiben bei der Analyse unverändert. Die Vorschau kann sensible Textstellen enthalten: nicht in Tickets/Screenshots veröffentlichen.
+
+Nach `git pull --ff-only` muss der Backend-Container für die neuen Systempakete **neu gebaut** werden. Erst mit geprüfter Sicherung und in einer getrennten Testinstallation ausprobieren. `docker compose -p maintenance-vik-test up -d --build --wait` im Testordner verwendet eigene Datenbank-/Dokumentenvolumes. Ein Import ersetzt ausschließlich Daten der gewählten Instanz – niemals den Backup-Import in der Produktivinstallation testen.
