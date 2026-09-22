@@ -22,5 +22,5 @@ class NotificationChannel(Protocol):
 INTEGRATIONS = [
     {"name": "Dokumentenanalyse / OCR", "status": "prepared", "description": "Schnittstelle vorbereitet. Kategorien und Datum werden derzeit manuell gepflegt."},
     {"name": "Telegram", "status": "prepared", "description": "Kanal-Schnittstelle vorbereitet. Noch kein Versand und kein Bot verbunden."},
-    {"name": "WhatsApp", "status": "planned", "description": "Später über einen zusätzlichen Benachrichtigungskanal."},
+    {"name": "WhatsApp", "status": "available", "description": "Optionaler Templateversand über die WhatsApp Cloud API; ohne lokale Provider-Konfiguration deaktiviert."},
 ]
