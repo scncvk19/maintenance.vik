@@ -26,6 +26,39 @@ jobs:
         working-directory: backend
         run: python -m pytest -q -p no:cacheprovider
 
+  postgres-restore:
+    name: PostgreSQL backup restore (disposable CI database)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: maintenance_ci_test
+          POSTGRES_USER: maintenance_ci_test
+          POSTGRES_PASSWORD: test-only-postgres-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U maintenance_ci_test -d maintenance_ci_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.lock.txt
+      - name: Install locked dependencies
+        run: python -m pip install -r backend/requirements.lock.txt
+      - name: Export, preview, restore and validate encrypted data
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+psycopg://maintenance_ci_test:test-only-postgres-password@127.0.0.1:5432/maintenance_ci_test
+          TEST_ALLOW_DESTRUCTIVE_POSTGRES: ISOLATED_CI_ONLY
+        run: python integration_postgres.py
+
   frontend:
     name: Frontend lint, types and build
     runs-on: ubuntu-latest
