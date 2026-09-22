@@ -1,6 +1,6 @@
 # Separater großer Sicherungsweg: PostgreSQL-Dump + Dokumentenvolume als Dateien.
 # Keine Datenbankänderungen, kein Restore, niemals docker compose down -v.
-# Frontend und Backend werden während der Kopie angehalten und im finally neu gestartet.
+# Nur für Dump und Dateikopie werden Frontend/Backend gestoppt, nicht fürs Hashen.
 [CmdletBinding()]
 param(
     [string]$Destination = '',
@@ -44,30 +44,6 @@ try {
     [IO.Directory]::CreateDirectory($dataDir) | Out-Null
     & docker cp "${backendId}:/data/." $dataDir
     if ($LASTEXITCODE -ne 0) { throw 'Dokumentenvolume konnte nicht kopiert werden.' }
-
-    # Jede kopierte Datei wird separat geprüft. Kein künstliches 250-MB-Limit.
-    $entries = New-Object 'System.Collections.Generic.List[object]'
-    foreach ($file in (Get-ChildItem -LiteralPath $stage -File -Recurse)) {
-        $relative = $file.FullName.Substring($stage.Length + 1).Replace('\', '/')
-        $entries.Add([pscustomobject]@{
-            path = $relative
-            size = [long]$file.Length
-            sha256 = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-        })
-    }
-    if (-not (Test-Path -LiteralPath $dumpFile) -or $entries.Count -lt 1) { throw 'Backup unvollständig.' }
-    $manifest = [ordered]@{
-        format = 'maintenance.vik-offline'
-        schema_version = 1
-        created_at_utc = [DateTime]::UtcNow.ToString('o')
-        compose_project = $ComposeProject
-        files = $entries.ToArray()
-    }
-    $manifestPath = Join-Path $stage 'manifest.json'
-    $utf8 = New-Object System.Text.UTF8Encoding($false)
-    [IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 8), $utf8)
-    $manifestHash = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    [IO.File]::WriteAllText((Join-Path $stage 'manifest.sha256'), $manifestHash + [Environment]::NewLine, [Text.Encoding]::ASCII)
 }
 finally {
     try { & docker exec $databaseId rm -f $containerDump 2>$null | Out-Null }
@@ -84,6 +60,31 @@ finally {
     }
 }
 if ($restartFailed) { throw 'Sicherung wurde erstellt, aber die Anwendung konnte nicht wieder gestartet werden. Teilverzeichnis prüfen.' }
+
+# Ab hier läuft die Anwendung wieder. Nur die zuvor kopierte Momentaufnahme wird gelesen.
+$entries = New-Object 'System.Collections.Generic.List[object]'
+foreach ($file in (Get-ChildItem -LiteralPath $stage -File -Recurse)) {
+    $relative = $file.FullName.Substring($stage.Length + 1).Replace('\', '/')
+    $entries.Add([pscustomobject]@{
+        path = $relative
+        size = [long]$file.Length
+        sha256 = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    })
+}
+$dumpFile = Join-Path $stage 'database.dump'
+if (-not (Test-Path -LiteralPath $dumpFile) -or $entries.Count -lt 1) { throw 'Backup unvollständig.' }
+$manifest = [ordered]@{
+    format = 'maintenance.vik-offline'
+    schema_version = 1
+    created_at_utc = [DateTime]::UtcNow.ToString('o')
+    compose_project = $ComposeProject
+    files = $entries.ToArray()
+}
+$manifestPath = Join-Path $stage 'manifest.json'
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+[IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 8), $utf8)
+$manifestHash = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::WriteAllText((Join-Path $stage 'manifest.sha256'), $manifestHash + [Environment]::NewLine, [Text.Encoding]::ASCII)
 Move-Item -LiteralPath $stage -Destination $final -ErrorAction Stop
 Write-Host "Große Sicherung erstellt: $final" -ForegroundColor Green
 Write-Host 'Enthält database.dump, data/, manifest.json und manifest.sha256. Noch kein Restore-Nachweis.'
