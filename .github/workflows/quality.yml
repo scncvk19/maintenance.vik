@@ -88,18 +88,7 @@ jobs:
           node tests/access-gate.mjs
       - name: Verify multi-user login and roles in production server
         run: |
-          USERS=$(node - <<'NODE'
-          const { pbkdf2Sync } = require('node:crypto');
-          const users = [
-            ['admin','admin','ci-admin-password-123','00112233445566778899aabbccddeeff'],
-            ['viewer','viewer','ci-viewer-password-123','ffeeddccbbaa99887766554433221100'],
-          ].map(([username, role, password, salt]) => ({
-            username, role, salt,
-            hash: pbkdf2Sync(password, Buffer.from(salt, 'hex'), 310000, 32, 'sha256').toString('hex'),
-          }));
-          process.stdout.write(Buffer.from(JSON.stringify(users)).toString('base64'));
-          NODE
-          )
+          USERS=$(node -e "const {pbkdf2Sync}=require('node:crypto'); const users=[['admin','admin','ci-admin-password-123','00112233445566778899aabbccddeeff'],['viewer','viewer','ci-viewer-password-123','ffeeddccbbaa99887766554433221100']].map(([username,role,password,salt])=>({username,role,salt,hash:pbkdf2Sync(password,Buffer.from(salt,'hex'),310000,32,'sha256').toString('hex')})); process.stdout.write(Buffer.from(JSON.stringify(users)).toString('base64'))")
           HOSTNAME=127.0.0.1 PORT=3000 APP_AUTH_USERS_B64="$USERS" APP_SESSION_SECRET=ci-session-secret-at-least-32-characters-long node .next/standalone/server.js &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
@@ -117,22 +106,24 @@ jobs:
           $parseErrors = $null
           [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'scripts/Backup.ps1'), [ref]$tokens, [ref]$parseErrors)
           if ($parseErrors.Count -gt 0) { $parseErrors | Format-List | Out-String | Write-Error; exit 1 }
+      - name: Parse user setup script
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'scripts/Set-AppUser.ps1'), [ref]$tokens, [ref]$parseErrors)
+          if ($parseErrors.Count -gt 0) { $parseErrors | Format-List | Out-String | Write-Error; exit 1 }
       - name: Exercise local user setup against temporary env
         shell: pwsh
         run: |
           $temp = Join-Path $env:RUNNER_TEMP 'auth-setup'
           New-Item -ItemType Directory -Path $temp | Out-Null
-          [IO.File]::WriteAllText((Join-Path $temp '.env'), "POSTGRES_PASSWORD=test" + [Environment]::NewLine + "APP_PORT=3000" + [Environment]::NewLine)
+          [IO.File]::WriteAllText((Join-Path $temp '.env'), ('POSTGRES_PASSWORD=test' + [Environment]::NewLine + 'APP_PORT=3000' + [Environment]::NewLine))
           $password = ConvertTo-SecureString 'ci-admin-password-123' -AsPlainText -Force
           ./scripts/Set-AppUser.ps1 -UserName admin -Role admin -Password $password -ProjectDirectory $temp
           $content = Get-Content -LiteralPath (Join-Path $temp '.env') -Raw
-          if ($content -notmatch '(?m)^APP_AUTH_USERS_B64=.+
-# The Playwright test which restores a backup is intentionally NOT run here:
-# it replaces all application records and requires a dedicated disposable deployment.
- -or $content -notmatch '(?m)^APP_SESSION_SECRET=[0-9a-f]{64}
-# The Playwright test which restores a backup is intentionally NOT run here:
-# it replaces all application records and requires a dedicated disposable deployment.
-) { throw 'Auth-Konfiguration wurde nicht geschrieben.' }
+          if ($content -notmatch '(?m)^APP_AUTH_USERS_B64=.+$') { throw 'Benutzerkonfiguration wurde nicht geschrieben.' }
+          if ($content -notmatch '(?m)^APP_SESSION_SECRET=[0-9a-f]{64}$') { throw 'Session-Secret wurde nicht geschrieben.' }
 
 # The Playwright test which restores a backup is intentionally NOT run here:
 # it replaces all application records and requires a dedicated disposable deployment.
