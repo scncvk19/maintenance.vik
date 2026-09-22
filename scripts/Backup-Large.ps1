@@ -1,6 +1,6 @@
 # Separater großer Sicherungsweg: PostgreSQL-Dump + Dokumentenvolume als Dateien.
 # Keine Datenbankänderungen, kein Restore, niemals docker compose down -v.
-# Während der Kopie werden Frontend und Backend angehalten und im finally neu gestartet.
+# Frontend und Backend werden während der Kopie angehalten und im finally neu gestartet.
 [CmdletBinding()]
 param(
     [string]$Destination = '',
@@ -46,14 +46,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Dokumentenvolume konnte nicht kopiert werden.' }
 
     # Jede kopierte Datei wird separat geprüft. Kein künstliches 250-MB-Limit.
-    $entries = @()
+    $entries = New-Object 'System.Collections.Generic.List[object]'
     foreach ($file in (Get-ChildItem -LiteralPath $stage -File -Recurse)) {
         $relative = $file.FullName.Substring($stage.Length + 1).Replace('\', '/')
-        $entries += [pscustomobject]@{
+        $entries.Add([pscustomobject]@{
             path = $relative
             size = [long]$file.Length
             sha256 = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-        }
+        })
     }
     if (-not (Test-Path -LiteralPath $dumpFile) -or $entries.Count -lt 1) { throw 'Backup unvollständig.' }
     $manifest = [ordered]@{
@@ -61,7 +61,7 @@ try {
         schema_version = 1
         created_at_utc = [DateTime]::UtcNow.ToString('o')
         compose_project = $ComposeProject
-        files = $entries
+        files = $entries.ToArray()
     }
     $manifestPath = Join-Path $stage 'manifest.json'
     $utf8 = New-Object System.Text.UTF8Encoding($false)
@@ -70,10 +70,14 @@ try {
     [IO.File]::WriteAllText((Join-Path $stage 'manifest.sha256'), $manifestHash + [Environment]::NewLine, [Text.Encoding]::ASCII)
 }
 finally {
-    & docker exec $databaseId rm -f $containerDump 2>$null
+    try { & docker exec $databaseId rm -f $containerDump 2>$null | Out-Null }
+    catch { Write-Warning 'Temporäre Dump-Datei konnte nicht aus dem DB-Container entfernt werden.' }
     if ($paused) {
-        & docker @compose start backend frontend
-        if ($LASTEXITCODE -ne 0) {
+        try {
+            & docker @compose start backend frontend
+            if ($LASTEXITCODE -ne 0) { throw 'Docker-Start meldete einen Fehler.' }
+        }
+        catch {
             $restartFailed = $true
             Write-Warning 'KRITISCH: Anwendungsstart fehlgeschlagen. Bitte Docker-Status sofort prüfen.'
         }
