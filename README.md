@@ -31,6 +31,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'N:\maintenance.vik\scri
 
 Ohne `APP_AUTH_PASSWORD` bleibt das bisherige lokale Verhalten bestehen. Für einen späteren Mehrbenutzerbetrieb sind serverseitige Authentifizierung, Rollen und Session-Verwaltung weiterhin offen.
 
+## Optionaler WhatsApp-Kanal
+
+Ein datensparsamer WhatsApp-Cloud-API-Kanal ist optional verfügbar und standardmäßig deaktiviert. Er verwendet ein freigegebenes Template und überträgt nur Erinnerungsanzahlen. Einrichtung: `docs/whatsapp.md`.
+
 ## Funktionsbereiche
 
 - Immobilien, Grundstücke, Fahrzeuge und technische Anlagen
