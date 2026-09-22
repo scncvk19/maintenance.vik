@@ -80,6 +80,12 @@ jobs:
         run: npm run typecheck
       - name: Production build
         run: npm run build
+      - name: Verify opt-in access gate in production server
+        run: |
+          HOSTNAME=127.0.0.1 PORT=3000 APP_AUTH_PASSWORD=ci-test-password node .next/standalone/server.js &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          node tests/access-gate.mjs
 
   backup-script:
     name: PowerShell backup syntax
