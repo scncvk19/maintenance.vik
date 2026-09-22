@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/Backup-Large.ps1'
       - 'scripts/Verify-LargeBackup.ps1'
+      - 'scripts/Restore-Large.ps1'
       - '.github/workflows/large-backup.yml'
       - 'backend/Dockerfile'
   push:
@@ -12,6 +13,7 @@ on:
     paths:
       - 'scripts/Backup-Large.ps1'
       - 'scripts/Verify-LargeBackup.ps1'
+      - 'scripts/Restore-Large.ps1'
       - 'backend/Dockerfile'
 permissions:
   contents: read
@@ -26,6 +28,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Start disposable, isolated Compose project
         run: docker compose -p maintenance-vik-offline-ci up -d --build --wait --wait-timeout 300
+      - name: Seed disposable database
+        run: curl --fail --silent --show-error -X POST http://127.0.0.1:3299/api/seed
       - name: Generate disposable document larger than legacy ZIP limit
         run: |
           backend_id=$(docker compose -p maintenance-vik-offline-ci ps -q backend)
@@ -41,9 +45,35 @@ jobs:
           if ($large.Length -le 250MB) { throw 'Große Testdatei fehlt oder ist zu klein.' }
           $services = docker compose -p maintenance-vik-offline-ci ps --status running --services
           if ($services -notcontains 'backend' -or $services -notcontains 'frontend') { throw 'Anwendung wurde nach Backup nicht wieder gestartet.' }
+      - name: Restore offline backup into a second isolated project
+        shell: pwsh
+        run: |
+          $folder = Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/bulk" -Directory | Where-Object { $_.Name -notlike '.*.partial' } | Select-Object -First 1
+          if (-not $folder) { throw 'Kein Offline-Backup für Restore gefunden.' }
+          $env:APP_PORT = '3399'
+          docker compose -p maintenance-vik-restore-test up -d --build --wait --wait-timeout 300
+          if ($LASTEXITCODE -ne 0) { throw 'Zweite Testinstanz konnte nicht gestartet werden.' }
+          ./scripts/Restore-Large.ps1 -BackupDirectory $folder.FullName -ComposeProject maintenance-vik-restore-test -Confirmation RESTORE_ISOLATED_TEST
+          $assets = Invoke-RestMethod -Uri 'http://127.0.0.1:3399/api/records/assets'
+          if (@($assets).Count -lt 3) { throw 'Datenbankdaten wurden nicht wiederhergestellt.' }
+          $restoredBackend = (docker compose -p maintenance-vik-restore-test ps -q backend | Out-String).Trim()
+          $size = [long](docker exec $restoredBackend stat -c %s ('/data/uploads/' + ('a' * 64)))
+          if ($size -le 250MB) { throw 'Große Dokumentdatei wurde nicht wiederhergestellt.' }
+      - name: Ensure production project name is rejected
+        shell: pwsh
+        run: |
+          $folder = Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/bulk" -Directory | Select-Object -First 1
+          try {
+            ./scripts/Restore-Large.ps1 -BackupDirectory $folder.FullName -ComposeProject maintenance-vik -Confirmation RESTORE_ISOLATED_TEST
+            throw 'Produktivprojekt wurde unerwartet akzeptiert.'
+          } catch {
+            if ($_.Exception.Message -notmatch 'Sicherheitsstopp') { throw }
+          }
       - name: Inspect services on failure
         if: failure()
         run: docker compose -p maintenance-vik-offline-ci ps
       - name: Remove only disposable CI containers and volumes
         if: always()
-        run: docker compose -p maintenance-vik-offline-ci down -v --remove-orphans
+        run: |
+          docker compose -p maintenance-vik-offline-ci down -v --remove-orphans
+          APP_PORT=3399 docker compose -p maintenance-vik-restore-test down -v --remove-orphans || true
