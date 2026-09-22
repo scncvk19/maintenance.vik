@@ -10,6 +10,27 @@ Lokale Webanwendung für Immobilien, Fahrzeuge, technische Anlagen, Termine und 
 
 Beim ersten Start erzeugt die Anwendung eine lokale `.env`-Datei mit einem zufälligen Datenbankpasswort. Diese Datei, die Datenbank und hochgeladene Dokumente bleiben lokal und werden nicht in Git übernommen.
 
+## Optionaler Zugriffsschutz (ein Benutzer)
+
+Die Anwendung ist standardmäßig nur an `127.0.0.1` gebunden. Für einen zusätzlichen Passwortschutz `APP_AUTH_PASSWORD=` mit einem **eigenen, langen Passwort** in die lokale `.env` eintragen (ohne Anführungszeichen, keine Zeilenumbrüche) und die Container neu erstellen:
+
+```powershell
+docker compose --project-directory 'N:\maintenance.vik' up -d --build
+```
+
+Danach fragt der Browser nach Benutzername `admin` und dem gesetzten Passwort. Der Schutz gilt auch für die API und den Backup-Export. **Es handelt sich noch nicht um eine Mehrbenutzerverwaltung:** keine Rollen, kein Passwort-Reset und kein separates Logout. Bei Vergessen des Passworts lässt es sich in der lokalen `.env` ändern. Die `.env` niemals in Git übernehmen oder weitergeben.
+
+Der integrierte Webserver ist für `localhost` vorgesehen. Für Zugriff von anderen Geräten nur einen abgesicherten VPN-Zugang oder einen **HTTPS**-Reverse-Proxy verwenden: HTTP Basic sendet die Zugangsdaten bei jeder Anfrage und ist über unverschlüsseltes HTTP im Netzwerk nicht sicher. Die Datenbank und den Backend-Port nicht separat veröffentlichen.
+
+Mit aktiviertem Passwortschutz benötigt das Backupskript Zugangsdaten. Diese interaktiv statt im Befehl als Klartext eingeben:
+
+```powershell
+$credential = Get-Credential -UserName admin
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'N:\maintenance.vik\scripts\Backup.ps1' -Credential $credential
+```
+
+Ohne `APP_AUTH_PASSWORD` bleibt das bisherige lokale Verhalten bestehen. Für einen späteren Mehrbenutzerbetrieb sind serverseitige Authentifizierung, Rollen und Session-Verwaltung weiterhin offen.
+
 ## Funktionsbereiche
 
 - Immobilien, Grundstücke, Fahrzeuge und technische Anlagen
