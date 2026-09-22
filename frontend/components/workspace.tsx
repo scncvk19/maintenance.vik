@@ -5,7 +5,7 @@ import { Bell, Building2, CalendarDays, CarFront, Check, ChevronRight, CircleDol
 import Editor from './editor';
 import AssetDetail from './asset-detail';
 import TaxCenter from './tax-center';
-import { api, billingCycles, categories, conditions, Dashboard, day, kinds, money, Row, statuses, today, workKinds } from '../lib/data';
+import { api, billingCycles, categories, conditions, Dashboard, day, json, kinds, money, Row, statuses, today, workKinds } from '../lib/data';
 
 const nav = [
   ['dashboard', 'Übersicht', LayoutDashboard], ['properties', 'Immobilien', Building2], ['vehicles', 'Fahrzeuge', CarFront], ['tax', 'Steuerfälle', FileText], ['tasks', 'Aufgaben & Termine', Check],
