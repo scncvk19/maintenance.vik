@@ -67,6 +67,10 @@ TELEGRAM_SEND_ENABLED=YES_I_CONFIGURED_THE_BOT
 
 Danach die Container neu erstellen. In **Einstellungen & Backup → Telegram** zuerst die Vorschau laden. Der Versand überträgt nur Anzahlen fälliger Aufgaben/Wartungen, Verträge und Dokumenterinnerungen; keine Titel, Adressen, Beträge oder Steuerinhalte. Doppelte Sendungen an denselben Chat werden pro Kalendertag unterdrückt.
 
+## Optionales HTTPS
+
+Für LAN-/VPN-Zugriff gibt es einen optionalen Caddy-Reverse-Proxy mit interner TLS-CA. Der normale `localhost:3000`-Start bleibt unverändert. Einrichtung und Zertifikats-Hinweise: `docs/https.md`.
+
 ## Funktionsbereiche
 
 - Immobilien, Grundstücke, Fahrzeuge und technische Anlagen
