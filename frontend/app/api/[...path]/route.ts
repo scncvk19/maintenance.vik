@@ -27,11 +27,13 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   }
   try {
     const url = `${process.env.API_URL || 'http://127.0.0.1:8000'}/${path.map(encodeURIComponent).join('/')}${request.nextUrl.search}`;
-    // The tax vault uses a short-lived, per-browser session token. Forward only
-    // that explicit application header instead of passing arbitrary browser headers.
+    // Forward only explicitly allowed application headers, never arbitrary browser headers.
     const upstreamHeaders: Record<string, string> = { 'Content-Type': request.headers.get('content-type') || 'application/json' };
     const taxSession = request.headers.get('x-tax-session');
     if (taxSession) upstreamHeaders['X-Tax-Session'] = taxSession;
+    if (request.method === 'POST' && path.join('/') === 'notifications/telegram/send' && request.headers.get('x-confirm-send') === 'SEND_TELEGRAM') {
+      upstreamHeaders['X-Confirm-Send'] = 'SEND_TELEGRAM';
+    }
     const result = await fetch(url, { method: request.method, headers: upstreamHeaders, body: body as BodyInit | undefined, cache: 'no-store', signal: AbortSignal.timeout(120000) });
     const headers = new Headers({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
     for (const name of ['content-type', 'content-disposition']) { const value = result.headers.get(name); if (value) headers.set(name, value); }

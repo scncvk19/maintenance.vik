@@ -20,6 +20,8 @@ services:
       DATABASE_URL: postgresql+psycopg://maintenance:${POSTGRES_PASSWORD}@database:5432/maintenance
       DATA_DIR: /data
       TZ: Europe/Berlin
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_SEND_ENABLED: ${TELEGRAM_SEND_ENABLED:-no}
     volumes:
       - documents:/data
     depends_on:
