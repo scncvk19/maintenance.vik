@@ -20,7 +20,7 @@ class NotificationChannel(Protocol):
 
 
 INTEGRATIONS = [
-    {"name": "Dokumentenanalyse / OCR", "status": "prepared", "description": "Schnittstelle vorbereitet. Kategorien und Datum werden derzeit manuell gepflegt."},
-    {"name": "Telegram", "status": "prepared", "description": "Kanal-Schnittstelle vorbereitet. Noch kein Versand und kein Bot verbunden."},
+    {"name": "Dokumentenanalyse / OCR", "status": "available", "description": "Lokale OCR/Textanalyse verfügbar. Vorschläge werden nie automatisch gespeichert und müssen bestätigt werden."},
+    {"name": "Telegram", "status": "available", "description": "Datensparsamer Erinnerungsversand verfügbar; Aktivierung erfordert Bot-Token und ausdrückliche Freigabe."},
     {"name": "WhatsApp", "status": "planned", "description": "Später über einen zusätzlichen Benachrichtigungskanal."},
 ]
