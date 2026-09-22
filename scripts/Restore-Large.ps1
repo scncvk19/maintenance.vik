@@ -18,8 +18,7 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI
 
 $backup = [IO.Path]::GetFullPath($BackupDirectory)
 $verify = Join-Path $PSScriptRoot 'Verify-LargeBackup.ps1'
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $verify -BackupDirectory $backup
-if ($LASTEXITCODE -ne 0) { throw 'Backup-Prüfung fehlgeschlagen. Restore abgebrochen.' }
+& $verify -BackupDirectory $backup
 
 $compose = @('compose', '--project-directory', $project, '-p', $ComposeProject)
 $databaseId = (& docker @compose ps --status running -q database | Out-String).Trim()
