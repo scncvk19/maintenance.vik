@@ -1,11 +1,32 @@
 import { timingSafeEqual } from 'node:crypto';
-import type { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { multiUserEnabled, sessionCookieName, verifySession } from './lib/auth';
 
-/** Optional, single-user HTTP Basic access gate for the browser and /api.
- * Configure APP_AUTH_PASSWORD in the frontend container to activate it.
- * The reverse proxy must terminate HTTPS before exposing the app remotely.
+/** Access gate for browser and /api.
+ * Preferred mode: APP_AUTH_USERS_B64 + APP_SESSION_SECRET (multi-user session login).
+ * Legacy fallback: APP_AUTH_PASSWORD (single shared HTTP Basic password).
  */
 export function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  if (multiUserEnabled()) {
+    if (path === '/login' || path === '/api/auth/login' || path === '/api/auth/logout' || path === '/logout') return;
+    let user = null;
+    try { user = verifySession(request.cookies.get(sessionCookieName())?.value); } catch { user = null; }
+    if (!user) {
+      if (path.startsWith('/api/')) return NextResponse.json({ detail: 'Anmeldung erforderlich.' }, { status: 401 });
+      const login = new URL('/login', request.url);
+      login.searchParams.set('next', path);
+      return NextResponse.redirect(login);
+    }
+    if (user.role === 'viewer') {
+      const sensitive = path.startsWith('/api/tax-') || path.startsWith('/api/tax-cases') || path.startsWith('/api/backup');
+      const write = path.startsWith('/api/') && !['GET', 'HEAD'].includes(request.method);
+      if (sensitive || write) return NextResponse.json({ detail: 'Nur Administratoren dürfen diese Aktion ausführen.' }, { status: 403 });
+    }
+    return;
+  }
+
   const password = process.env.APP_AUTH_PASSWORD;
   if (!password) return;
 
@@ -19,9 +40,8 @@ export function proxy(request: NextRequest) {
   const authorization = request.headers.get('authorization');
   if (!authorization?.startsWith('Basic ')) return challenge();
   let decoded: string;
-  try {
-    decoded = Buffer.from(authorization.slice(6), 'base64').toString('utf8');
-  } catch { return challenge(); }
+  try { decoded = Buffer.from(authorization.slice(6), 'base64').toString('utf8'); }
+  catch { return challenge(); }
   const separator = decoded.indexOf(':');
   if (separator < 0 || decoded.slice(0, separator) !== 'admin') return challenge();
   const provided = Buffer.from(decoded.slice(separator + 1), 'utf8');
