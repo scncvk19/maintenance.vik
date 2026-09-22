@@ -1,0 +1,24 @@
+name: Windows test setup syntax
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/Prepare-TestEnvironment.ps1'
+      - '.github/workflows/test-setup-syntax.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/Prepare-TestEnvironment.ps1'
+permissions:
+  contents: read
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'scripts/Prepare-TestEnvironment.ps1'), [ref]$tokens, [ref]$errors)
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error; exit 1 }
