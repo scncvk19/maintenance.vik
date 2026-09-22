@@ -254,7 +254,10 @@ def create_recovery_code(x_tax_session: str = Header(default="", alias="X-Tax-Se
         code = recovery_code()
         recovery_salt = secrets.token_bytes(16)
         recovery_key = tax_key(code, recovery_salt)
-        vault.password_wrapped_key = tax_seal({"key": data_key.hex()}, data_key)
+        # Legacy vaults without a wrapper derive their data key from the password.
+        # Never replace an existing password-derived wrapper with a data-key wrapper.
+        if not vault.password_wrapped_key:
+            vault.password_wrapped_key = tax_seal({"key": data_key.hex()}, data_key)
         vault.recovery_salt = recovery_salt.hex()
         vault.recovery_verifier = hashlib.sha256(recovery_key).hexdigest()
         vault.recovery_wrapped_key = tax_seal({"key": data_key.hex()}, recovery_key)
@@ -469,6 +472,8 @@ async def backup_import(file: UploadFile = File(...), confirmation: str = Form(.
     parsed, files, vault = validate_backup(await read_limited(file, MAX_BACKUP))
     with data_lock, Session() as session:
         restore_backup(session, parsed, files, vault)
+        # A restored vault can have a different encryption key. Expire every old token.
+        TAX_SESSIONS.clear()
     return {"restored": True}
 
 
