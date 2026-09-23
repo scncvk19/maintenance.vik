@@ -9,8 +9,8 @@ type Props = {
   components: Row[];
   transactions: Row[];
   contracts: Row[];
-  onCreateIncome: (assetId?: string) => void;
-  onCreateExpense: (assetId?: string) => void;
+  onCreateIncome: (assetId?: string, componentId?: string) => void;
+  onCreateExpense: (assetId?: string, componentId?: string) => void;
   onCreateContract: (assetId?: string) => void;
   onEditTransaction: (row: Row) => void;
   onEditContract: (row: Row) => void;
@@ -55,9 +55,9 @@ export default function FinanceOverview({ assets, components, transactions, cont
   return <div className="finance-overview">
     <section className="panel finance-filter-panel"><div><span className="eyebrow">FINANZBEREICH</span><h2>{assetFilter === '__general__' ? 'Allgemein / Haushalt' : selectedAsset ? selectedAsset.name : 'Alle Bereiche'}</h2><p>{assetFilter === '__general__' ? 'Gehalt, Lebensmittel, Freizeit und andere Buchungen ohne Objektbezug.' : selectedAsset ? assetLabel(selectedAsset, assets) : 'Gesamtübersicht über allgemeine Finanzen und alle Objekte.'}</p></div><div className="finance-filter-controls"><label>Bereich auswählen<select value={assetFilter} onChange={e => { setAssetFilter(e.target.value); setComponentFilter(''); }}><option value="">Alle Bereiche</option><option value="__general__">Allgemein / ohne Objekt</option>{assets.map(asset => <option key={asset.id} value={asset.id}>{asset.name}{asset.location ? ` · ${asset.location}` : ''}</option>)}</select></label>{selectedAsset && <label>Etage / Bereich / Raum<select value={componentFilter} onChange={e => setComponentFilter(e.target.value)}><option value="">Gesamtes Objekt</option>{availableComponents.map(component => <option key={component.id} value={component.id}>{component.name}</option>)}</select></label>}</div></section>
     <div className="finance-actions">
-      <button className="primary" onClick={() => onCreateIncome(assetFilter && assetFilter !== '__general__' ? assetFilter : undefined)}><TrendingUp size={17}/>Einnahme anlegen</button>
-      <button className="secondary" onClick={() => onCreateExpense(assetFilter && assetFilter !== '__general__' ? assetFilter : undefined)}><TrendingDown size={17}/>Ausgabe anlegen</button>
-      <button className="secondary" onClick={() => onCreateContract(assetFilter && assetFilter !== '__general__' ? assetFilter : undefined)}><FileText size={17}/>Vertrag anlegen</button>
+      <button className="primary" onClick={() => onCreateIncome(assetFilter && assetFilter !== '__general__' ? assetFilter : undefined, componentFilter || undefined)}><TrendingUp size={17}/>Einnahme anlegen</button>
+      <button className="secondary" onClick={() => onCreateExpense(assetFilter && assetFilter !== '__general__' ? assetFilter : undefined, componentFilter || undefined)}><TrendingDown size={17}/>Ausgabe anlegen</button>
+      {assetFilter !== '__general__' && <button className="secondary" onClick={() => onCreateContract(assetFilter || undefined)}><FileText size={17}/>Vertrag anlegen</button>}
     </div>
 
     <div className="finance-kpis">
