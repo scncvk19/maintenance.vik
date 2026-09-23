@@ -19,6 +19,10 @@ def test_first_run_setup_and_login(client):
     assert current.status_code == 200
     assert current.json()["username"] == "admin"
 
+    logout = client.post("/auth/logout", headers={"X-App-Session": token})
+    assert logout.status_code == 200
+    assert client.get("/auth/session", headers={"X-App-Session": token}).status_code == 401
+
 
 def test_admin_can_manage_multiple_users_and_last_admin_is_protected(client):
     setup = client.post("/auth/setup", json={"username": "admin", "password": "maintenance-test-123"}).json()

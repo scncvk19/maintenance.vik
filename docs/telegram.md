@@ -1,17 +1,39 @@
 # Telegram-Erinnerungen
 
-Ab dieser Erweiterung ist `http://localhost:3000/reminders` eine **Vorschauseite**. Sie zeigt nur Anzahlen fälliger Aufgaben (einschließlich Wartungen), Verträge und Dokument-Erinnerungen. Keine Objektnamen, Adressen, Beträge, Steuerinhalte oder Dateinamen werden verschickt. Der Versand bleibt ohne bewusst eingerichteten Bot deaktiviert. Sobald Telegram ausdrücklich aktiviert wurde, prüft ein eigener Docker-Worker standardmäßig stündlich auf fällige Erinnerungen.
+Telegram wird direkt unter **Einstellungen & Backup → Anbindungen → Telegram** eingerichtet und getestet.
 
-## Vorschau ohne Telegram-Konto
+Die Vorschau zeigt nur Anzahlen fälliger Aufgaben/Wartungen, Verträge und Dokument-Erinnerungen. Es werden keine Objektnamen, Adressen, Beträge, Steuerinhalte oder Dateinamen verschickt.
 
-Anwendung starten, in der bestehenden Empfängerverwaltung einen Testempfänger anlegen (Kanal Telegram), dann `/reminders` öffnen. Noch ohne Bot-Konfiguration lässt sich die Vorschau prüfen. Die Sendeschaltfläche bleibt deaktiviert. Die Route `/api/notifications/preview` gibt nur Anzahlen und den Konfigurationsstatus zurück.
+## Einrichtung
 
-## Echtes Senden ausdrücklich aktivieren
+1. Einen eigenen Telegram-Bot erstellen und den Bot-Token geheim halten.
+2. In maintenance.vik unter **Einstellungen & Backup → Telegram** den Token eintragen.
+3. **Verbindung testen** ausführen.
+4. Telegram aktivieren und das gewünschte Prüfintervall auswählen.
+5. Unter **Benachrichtigungsempfänger** die numerische Chat-ID und die gewünschten Erinnerungstypen hinterlegen.
 
-1. Einen **eigenen** Telegram-Bot und eine private Chat-ID beschaffen. Beides geheim halten, nicht in Git, Chat, Screenshots oder ein Supportticket kopieren. Der Bot erhält Zugriff auf die Chat-Nachrichten, nicht auf deine Steuerakten.
-2. In der lokal bereits existierenden und ignorierten `N:\maintenance.vik\.env` ergänzen: `TELEGRAM_BOT_TOKEN=<persönlicher-Bot-Token>` und `TELEGRAM_SEND_ENABLED=YES_I_CONFIGURED_THE_BOT`. Das Standard-Compose übergibt diese Werte nur an das Backend. Die `.env` nicht in ein Backup-Archiv mit öffentlichen Zugriffsrechten oder Git übernehmen.
-3. Testempfänger in der bestehenden Empfängerverwaltung mit numerischer Chat-ID eintragen; gewünschte Erinnerungsarten aktivieren. Backend mit `docker compose --project-directory "N:\maintenance.vik" up -d --build backend` neu erstellen (erst **nach** gesichertem Stand und Prüfung der neuen Version).
-4. `/reminders` neu öffnen, die Vorschau lesen, Button klicken und zweite Bestätigung ausdrücklich akzeptieren. Für den echten Versand muss der Benutzer zum Test bereit sein. Ohne fällige Testdaten wird nichts gesendet.
-5. Manueller und automatischer Versand teilen dieselbe Tages-Deduplizierung: pro Chat-ID maximal eine Nachricht pro Kalendertag; der Hash der Chat-ID wird in `/data/telegram-sent.json` im vorhandenen Dokumentenvolume gespeichert. Keine Bot-Tokens oder Chat-IDs werden in dieser Protokolldatei gespeichert. **Bei fehlgeschlagenem Versand kann eine Teilzustellung erneut versucht werden**; die Telegram-API bietet hier keine garantierte Ende-zu-Ende-Exakt-einmal-Zustellung.
+Der Token wird lokal verschlüsselt gespeichert und nach dem Speichern nicht wieder im Klartext angezeigt.
 
-Der aktuelle lokale Basic-Auth-Schutz ist kein persönliches Mehrbenutzer-Login. Nicht öffentlich ins Internet stellen; für externen Zugang HTTPS über einen sauber konfigurierten VPN-/Reverse-Proxy-Weg verwenden. Das Backend ist im Compose nicht direkt am Host veröffentlicht.
+Die älteren Umgebungsvariablen `TELEGRAM_BOT_TOKEN`, `TELEGRAM_SEND_ENABLED` und `TELEGRAM_CHECK_INTERVAL_SECONDS` bleiben nur als Kompatibilitäts-/Fallbackweg für bestehende Installationen unterstützt.
+
+## Versand testen
+
+In **Einstellungen & Backup → Telegram**:
+
+1. **Vorschau laden**
+2. Anzahl aktiver Empfänger und fälliger Einträge prüfen
+3. **Jetzt senden** bewusst bestätigen
+
+Der Backend-Endpunkt `/api/notifications/preview` liefert ebenfalls nur Anzahlen und Konfigurationsstatus.
+
+## Automatischer Versand
+
+Der Docker-Dienst `reminder-worker` prüft die gespeicherte Konfiguration regelmäßig. Änderungen am Prüfintervall aus der UI werden ohne Bearbeitung der `.env` übernommen.
+
+Manueller und automatischer Versand teilen dieselbe Tages-Deduplizierung: pro Chat-ID maximal eine Nachricht pro Kalendertag. In der Protokolldatei wird nur ein Hash der Chat-ID gespeichert, nicht die Chat-ID selbst.
+
+Bei fehlgeschlagenem Versand kann eine Teilzustellung erneut versucht werden; die Telegram-API garantiert keine Ende-zu-Ende-Exakt-einmal-Zustellung.
+
+## Sicherheit
+
+Bot-Token und Chat-IDs nicht in Git, öffentliche Screenshots oder Supporttickets kopieren. Das Backend ist im Compose nicht direkt am Host veröffentlicht. Externer Zugriff auf maintenance.vik sollte nur über einen abgesicherten VPN-Zugang oder HTTPS-Reverse-Proxy erfolgen.
