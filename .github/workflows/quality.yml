@@ -94,6 +94,24 @@ jobs:
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           node tests/multiuser-auth.mjs
 
+  docker-build:
+    name: Docker images and compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate development compose
+        env:
+          POSTGRES_PASSWORD: ci-compose-password
+        run: docker compose config >/dev/null
+      - name: Validate release compose
+        env:
+          POSTGRES_PASSWORD: ci-compose-password
+        run: docker compose -f docker-compose.release.yml config >/dev/null
+      - name: Build backend image
+        run: docker build -t maintenance-vik-backend:ci backend
+      - name: Build frontend image
+        run: docker build -t maintenance-vik-frontend:ci frontend
+
   backup-script:
     name: PowerShell backup syntax
     runs-on: ubuntu-latest
