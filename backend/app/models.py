@@ -256,7 +256,7 @@ class ContractInput(Input):
 
 
 class NotificationRecipientInput(Input):
-    channel: Literal["telegram", "whatsapp"]
+    channel: Literal["telegram"]
     label: str = Field(min_length=1, max_length=120)
     address: str = Field(min_length=1, max_length=180)
     active: bool = True

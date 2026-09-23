@@ -58,18 +58,29 @@ PDFs, Bilder, TXT, CSV und DOCX können direkt in der Dokumentenübersicht mit *
 
 ## Telegram-Erinnerungen
 
-Telegram ist standardmäßig **deaktiviert**. Für einen Test einen eigenen Bot bei Telegram erstellen und in der lokalen `.env` ergänzen:
+Telegram ist der einzige externe Benachrichtigungskanal und standardmäßig **deaktiviert**. Für einen Test einen eigenen Bot bei Telegram erstellen und in der lokalen `.env` ergänzen:
 
 ```text
 TELEGRAM_BOT_TOKEN=<dein Bot-Token>
 TELEGRAM_SEND_ENABLED=YES_I_CONFIGURED_THE_BOT
 ```
 
-Danach die Container neu erstellen. In **Einstellungen & Backup → Telegram** zuerst die Vorschau laden. Der Versand überträgt nur Anzahlen fälliger Aufgaben/Wartungen, Verträge und Dokumenterinnerungen; keine Titel, Adressen, Beträge oder Steuerinhalte. Doppelte Sendungen an denselben Chat werden pro Kalendertag unterdrückt.
+Danach die Container neu erstellen. In **Einstellungen & Backup → Telegram** zuerst die Vorschau laden. Der Versand überträgt nur Anzahlen fälliger Aufgaben/Wartungen, Verträge und Dokumenterinnerungen; keine Titel, Adressen, Beträge oder Steuerinhalte. Doppelte Sendungen an denselben Chat werden pro Kalendertag unterdrückt. Ein eigener Docker-Worker prüft standardmäßig stündlich auf fällige Erinnerungen; das Intervall kann mit `TELEGRAM_CHECK_INTERVAL_SECONDS` angepasst werden.
 
-## Optionaler WhatsApp-Kanal
+## Installation mit fertigen Docker-Images
 
-Ein datensparsamer WhatsApp-Cloud-API-Kanal ist optional verfügbar und standardmäßig deaktiviert. Er verwendet ein freigegebenes Template und überträgt nur Erinnerungsanzahlen. Einrichtung: `docs/whatsapp.md`.
+Für eine Installation ohne lokalen Node.js-/Python-Build steht `docker-compose.release.yml` bereit. Nach einem erfolgreichen Image-Release werden Frontend und Backend aus GHCR geladen.
+
+1. `.env.example` nach `.env` kopieren und mindestens `POSTGRES_PASSWORD` setzen.
+2. Falls die GHCR-Pakete privat sind, einmal mit GitHub Container Registry anmelden.
+3. Starten:
+
+```powershell
+docker compose -f docker-compose.release.yml pull
+docker compose -f docker-compose.release.yml up -d
+```
+
+Die Datenbank und Dokumente liegen in persistenten Docker-Volumes. Ein Update erfolgt durch erneutes `pull` und `up -d`. Für reproduzierbare Installationen kann `MAINTENANCE_VIK_VERSION` auf einen Release-Tag wie `v1.0.0` gesetzt werden.
 
 ## Funktionsbereiche
 
