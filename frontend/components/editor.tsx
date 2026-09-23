@@ -4,8 +4,8 @@ import AddressMap from './address-map';
 import { FileText, X } from 'lucide-react';
 import { api, billingCycles, categories, conditions, json, kinds, Row, statuses, today, workKinds } from '../lib/data';
 
-type Props = { resource: string; row?: Row; assets: Row[]; components: Row[]; documents: Row[]; defaultKind?: string; defaultAssetId?: string; defaultDueDate?: string; close: () => void; saved: () => Promise<void> };
-export default function Editor({ resource, row, assets, components, documents, defaultKind, defaultAssetId, defaultDueDate, close, saved }: Props) {
+type Props = { resource: string; row?: Row; assets: Row[]; components: Row[]; documents: Row[]; defaultKind?: string; defaultAssetId?: string; defaultDueDate?: string; defaultDirection?: 'income' | 'expense'; close: () => void; saved: () => Promise<void> };
+export default function Editor({ resource, row, assets, components, documents, defaultKind, defaultAssetId, defaultDueDate, defaultDirection = 'expense', close, saved }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [assetId, setAssetId] = useState(String(row?.asset_id || defaultAssetId || assets[0]?.id || ''));
@@ -90,7 +90,7 @@ export default function Editor({ resource, row, assets, components, documents, d
             {(workKind === 'maintenance' || workKind === 'tax_return') ? <label>Wiederholung in Tagen <input name="interval_days" type="number" min="1" max="3650" defaultValue={value('interval_days', workKind === 'tax_return' ? '365' : '')}/><small>Für die jährliche Steuererklärung: 365 Tage.</small></label> : <input type="hidden" name="interval_days" value=""/>}
           </>}
           {resource === 'transactions' && <>
-            {select('direction', 'Buchungsart', { income: 'Einnahme', expense: 'Ausgabe' }, 'expense')}
+            {select('direction', 'Buchungsart', { income: 'Einnahme', expense: 'Ausgabe' }, defaultDirection)}
             <label>Betrag in EUR<input name="amount" type="number" min="0.01" step="0.01" max="20000000" required defaultValue={row ? Number(row.amount_cents) / 100 : ''}/></label>
             {input('booked_date', 'Datum', 'date', today())}{select('category', 'Kategorie', categories, 'other')}
           </>}
