@@ -39,3 +39,29 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json();
 }
 export const json = (method: string, body: unknown): RequestInit => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+
+export type SystemCondition = 'good' | 'attention' | 'critical';
+
+export function getSystemCondition(assetId: string | number | null, workItems: Row[], todayIso = today()): { key: SystemCondition; reason: string } {
+  const relevant = workItems.filter(item => String(item.asset_id) === String(assetId) && String(item.status) !== 'done');
+  const criticalDefect = relevant.find(item => String(item.kind) === 'defect' && ['critical', 'urgent'].includes(String(item.priority || 'normal')));
+  if (criticalDefect) return { key: 'critical', reason: 'Kritischer Mangel offen' };
+
+  const overdueMaintenance = relevant.find(item => String(item.kind) === 'maintenance' && String(item.due_date) < todayIso);
+  if (overdueMaintenance) return { key: 'critical', reason: 'Wartung überfällig' };
+
+  const openDefect = relevant.find(item => String(item.kind) === 'defect');
+  if (openDefect) return { key: 'attention', reason: 'Offener Mangel' };
+
+  const highPriority = relevant.find(item => ['high', 'critical', 'urgent'].includes(String(item.priority || 'normal')));
+  if (highPriority) return { key: 'attention', reason: 'Aufgabe mit hoher Priorität' };
+
+  const soon = new Date(`${todayIso}T12:00:00`);
+  soon.setDate(soon.getDate() + 30);
+  const soonIso = soon.toISOString().slice(0, 10);
+  const maintenanceSoon = relevant.find(item => String(item.kind) === 'maintenance' && String(item.due_date) >= todayIso && String(item.due_date) <= soonIso);
+  if (maintenanceSoon) return { key: 'attention', reason: 'Wartung in den nächsten 30 Tagen' };
+
+  return { key: 'good', reason: 'Keine kritischen oder bald fälligen Einträge' };
+}
