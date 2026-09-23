@@ -1,12 +1,12 @@
-# Telegram-Erinnerungen (optional, standardmäßig aus)
+# Telegram-Erinnerungen
 
-Ab dieser Erweiterung ist `http://localhost:3000/reminders` eine **Vorschauseite**. Sie zeigt nur Anzahlen fälliger Aufgaben (einschließlich Wartungen), Verträge und Dokument-Erinnerungen. Keine Objektnamen, Adressen, Beträge, Steuerinhalte oder Dateinamen werden verschickt. Der Versand erfolgt **nicht** automatisch im Hintergrund und ist ohne bewusst eingerichteten Bot deaktiviert. WhatsApp ist weiterhin nicht implementiert.
+Ab dieser Erweiterung ist `http://localhost:3000/reminders` eine **Vorschauseite**. Sie zeigt nur Anzahlen fälliger Aufgaben (einschließlich Wartungen), Verträge und Dokument-Erinnerungen. Keine Objektnamen, Adressen, Beträge, Steuerinhalte oder Dateinamen werden verschickt. Der Versand erfolgt **nicht** automatisch im Hintergrund und ist ohne bewusst eingerichteten Bot deaktiviert.
 
 ## Vorschau ohne Telegram-Konto
 
 Anwendung starten, in der bestehenden Empfängerverwaltung einen Testempfänger anlegen (Kanal Telegram), dann `/reminders` öffnen. Noch ohne Bot-Konfiguration lässt sich die Vorschau prüfen. Die Sendeschaltfläche bleibt deaktiviert. Die Route `/api/notifications/preview` gibt nur Anzahlen und den Konfigurationsstatus zurück.
 
-## Echtes Senden später ausdrücklich aktivieren
+## Echtes Senden ausdrücklich aktivieren
 
 1. Einen **eigenen** Telegram-Bot und eine private Chat-ID beschaffen. Beides geheim halten, nicht in Git, Chat, Screenshots oder ein Supportticket kopieren. Der Bot erhält Zugriff auf die Chat-Nachrichten, nicht auf deine Steuerakten.
 2. In der lokal bereits existierenden und ignorierten `N:\maintenance.vik\.env` ergänzen: `TELEGRAM_BOT_TOKEN=<persönlicher-Bot-Token>` und `TELEGRAM_SEND_ENABLED=YES_I_CONFIGURED_THE_BOT`. Das Standard-Compose übergibt diese Werte nur an das Backend. Die `.env` nicht in ein Backup-Archiv mit öffentlichen Zugriffsrechten oder Git übernehmen.
