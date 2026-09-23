@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CircleDollarSign, FileText, Plus, TrendingDown, TrendingUp, WalletCards } from 'lucide-react';
-import { billingCycles, categories, day, money, Row } from '../lib/data';
+import { billingCycles, day, money, Row, transactionCategories } from '../lib/data';
 
 type Props = {
   assets: Row[];
@@ -66,7 +66,7 @@ export default function FinanceOverview({ assets, transactions, contracts, onCre
         {recentTransactions.length ? <div className="finance-list">{recentTransactions.map(row => {
           const asset = assets.find(item => item.id === row.asset_id);
           return <button key={row.id} onClick={() => onEditTransaction(row)}>
-            <span><strong>{row.title}</strong><small>{assetLabel(asset, assets)} · {categories[String(row.category)] || 'Sonstiges'} · {day(row.booked_date)}</small></span>
+            <span><strong>{row.title}</strong><small>{assetLabel(asset, assets)} · {transactionCategories[String(row.category)] || 'Sonstiges'} · {day(row.booked_date)}</small></span>
             <b className={row.direction === 'income' ? 'positive' : 'negative'}>{row.direction === 'income' ? '+' : '−'}{money(Number(row.amount_cents || 0))}</b>
           </button>;
         })}</div> : <div className="empty compact"><p>Noch keine Buchungen vorhanden.</p></div>}
