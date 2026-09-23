@@ -221,7 +221,7 @@ class AssetInput(Input):
 class ComponentInput(Input):
     asset_id: str
     name: str = Field(min_length=1, max_length=160)
-    kind: Literal["room", "area", "component"] = "component"
+    kind: Literal["room", "floor", "area", "component"] = "component"
     notes: str = Field(default="", max_length=10000)
 
 
