@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from .backup import MAX_BACKUP, export_backup, record, restore_backup, validate_backup
 from .database import Session, UPLOADS, data_lock, engine
 from .integrations import INTEGRATIONS
+from .auth import router as auth_router
 from .models import ActivityLog, Asset, Base, Component, Contract, Document, DocumentInput, Person, RESOURCES, TaxAttachment, TaxCase, TaxVault, Transaction, TrashItem, WorkItem
 
 
@@ -106,6 +107,7 @@ async def lifespan(app):
 
 
 app = FastAPI(title="maintenance.vik", version="0.1.0", lifespan=lifespan)
+app.include_router(auth_router)
 
 
 def activity_label(row, fallback: str = "") -> str:
