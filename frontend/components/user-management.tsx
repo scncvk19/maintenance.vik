@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api, json } from '../lib/data';
+import PasswordInput from './password-input';
 
 type User = { id: string; username: string; role: 'admin' | 'viewer'; active: boolean; created_at: string };
 type Draft = User & { password?: string };
@@ -80,7 +81,7 @@ export default function UserManagement() {
         <input aria-label="Benutzername" value={user.username} disabled={busy} onChange={e => setUsers(rows => rows.map((row, i) => i === index ? {...row, username:e.target.value} : row))}/>
         <select aria-label="Rolle" value={user.role} disabled={busy} onChange={e => setUsers(rows => rows.map((row, i) => i === index ? {...row, role:e.target.value as 'admin'|'viewer'} : row))}><option value="admin">Administrator</option><option value="viewer">Viewer</option></select>
         <label className="check-field"><input type="checkbox" checked={user.active} disabled={busy} onChange={e => setUsers(rows => rows.map((row, i) => i === index ? {...row, active:e.target.checked} : row))}/>Aktiv</label>
-        <input aria-label="Neues Passwort" type="password" placeholder="Neues Passwort (optional)" minLength={12} disabled={busy} value={user.password || ''} onChange={e => setUsers(rows => rows.map((row, i) => i === index ? {...row, password:e.target.value} : row))}/>
+        <PasswordInput aria-label="Neues Passwort" placeholder="Neues Passwort (optional)" minLength={12} disabled={busy} value={user.password || ''} onChange={e => setUsers(rows => rows.map((row, i) => i === index ? {...row, password:e.target.value} : row))}/>
         <button className="secondary" disabled={busy} onClick={() => save(user)}>Speichern</button>
         <button className="danger-button" disabled={busy || user.id === me.id} onClick={() => remove(user)}>Löschen</button>
       </div>)}
@@ -90,7 +91,7 @@ export default function UserManagement() {
     <form className="user-create" onSubmit={create}>
       <label>Benutzername<input value={username} pattern="[A-Za-z0-9._-]{1,80}" maxLength={80} required onChange={e => setUsername(e.target.value)}/></label>
       <label>Rolle<select value={role} onChange={e => setRole(e.target.value as 'admin'|'viewer')}><option value="viewer">Viewer</option><option value="admin">Administrator</option></select></label>
-      <label>Passwort<input type="password" value={password} minLength={12} maxLength={256} required onChange={e => setPassword(e.target.value)}/></label>
+      <label>Passwort<PasswordInput value={password} minLength={12} maxLength={256} required onChange={e => setPassword(e.target.value)}/></label>
       <button className="primary" disabled={busy}>{busy ? 'Speichern …' : 'Benutzer hinzufügen'}</button>
     </form>
   </section>;
