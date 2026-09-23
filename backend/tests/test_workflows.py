@@ -68,6 +68,37 @@ def test_finances_use_integer_cents_and_current_month(client):
     assert summary["balance_cents"] == 12000
 
 
+def test_finances_support_general_and_subarea_assignments(client):
+    general = client.post("/records/transactions", json={
+        "title": "Gehalt", "direction": "income", "amount_cents": 250000,
+        "booked_date": str(date.today()), "category": "salary"
+    })
+    assert general.status_code == 201, general.text
+    assert general.json()["asset_id"] is None
+    assert general.json()["component_id"] is None
+
+    a = asset(client)
+    floor = client.post("/records/components", json={
+        "asset_id": a["id"], "name": "1. OG", "kind": "floor"
+    })
+    assert floor.status_code == 201, floor.text
+    linked = client.post("/records/transactions", json={
+        "asset_id": a["id"], "component_id": floor.json()["id"],
+        "title": "Lebensmittel", "direction": "expense", "amount_cents": 8500,
+        "booked_date": str(date.today()), "category": "groceries"
+    })
+    assert linked.status_code == 201, linked.text
+    assert linked.json()["component_id"] == floor.json()["id"]
+
+    other = asset(client)
+    invalid = client.post("/records/transactions", json={
+        "asset_id": other["id"], "component_id": floor.json()["id"],
+        "title": "Falsch zugeordnet", "direction": "expense", "amount_cents": 100,
+        "booked_date": str(date.today()), "category": "other"
+    })
+    assert invalid.status_code == 422
+
+
 def test_contracts_store_recurring_terms_and_reminders(client):
     a = asset(client)
     end_date = date.today() + timedelta(days=20)
