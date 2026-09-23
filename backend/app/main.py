@@ -690,9 +690,10 @@ def save_record(name, payload, record_id=None):
         if name == "work-items" and was_done and values["status"] != "done":
             raise HTTPException(409, "Erledigte Historieneinträge können nicht wieder geöffnet werden. Bitte neue Aufgabe anlegen.")
         if name == "components" and record_id and row.asset_id != values["asset_id"]:
-            linked = session.scalar(select(func.count()).select_from(WorkItem).where(WorkItem.component_id == record_id))
-            if linked:
-                raise HTTPException(409, "Verknüpfte Komponenten können nicht zu einem anderen Asset verschoben werden.")
+            linked_work = session.scalar(select(func.count()).select_from(WorkItem).where(WorkItem.component_id == record_id))
+            linked_finance = session.scalar(select(func.count()).select_from(Transaction).where(Transaction.component_id == record_id))
+            if linked_work or linked_finance:
+                raise HTTPException(409, "Verknüpfte Räume, Etagen oder Komponenten können nicht zu einem anderen Asset verschoben werden.")
         for key, value in values.items():
             if key == "id":
                 continue
