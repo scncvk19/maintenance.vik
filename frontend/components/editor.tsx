@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import AddressMap from './address-map';
 import { FileText, X } from 'lucide-react';
-import { api, billingCycles, categories, conditions, json, kinds, Row, statuses, today, workKinds } from '../lib/data';
+import { api, billingCycles, categories, conditions, json, kinds, Row, statuses, today, transactionCategories, workKinds } from '../lib/data';
 
 type Props = { resource: string; row?: Row; assets: Row[]; components: Row[]; documents: Row[]; defaultKind?: string; defaultAssetId?: string; defaultDueDate?: string; defaultDirection?: 'income' | 'expense'; close: () => void; saved: () => Promise<void> };
 export default function Editor({ resource, row, assets, components, documents, defaultKind, defaultAssetId, defaultDueDate, defaultDirection = 'expense', close, saved }: Props) {
@@ -39,6 +39,8 @@ export default function Editor({ resource, row, assets, components, documents, d
         const body: Record<string, unknown> = Object.fromEntries(data.entries());
         if (resource === 'transactions') {
           body.amount_cents = Math.round(Number(String(body.amount).replace(',', '.')) * 100); delete body.amount;
+          body.asset_id = body.asset_id || null;
+          body.component_id = body.component_id || null;
         }
         if (resource === 'documents') {
           body.reminder_days = Number(body.reminder_days || 30);
@@ -79,7 +81,7 @@ export default function Editor({ resource, row, assets, components, documents, d
       <form onSubmit={submit}>
         <div className="form-grid">
           {resource === 'assets' ? <>{input('name', 'Bezeichnung')}<label>Bereich<select name="kind" value={assetKind} onChange={event => setAssetKind(event.target.value)}>{Object.entries(kinds).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>{assetKind === 'vehicle' ? <><label className="span-two">Standort / Stellplatz <input name="location" value={location} onChange={e => setLocation(e.target.value)} placeholder="Garage, Stellplatz oder Standort" maxLength={300}/></label><label className="span-two">Zugeordnet zu Immobilie <select name="property_id" value={propertyId} onChange={e => setPropertyId(e.target.value)}><option value="">Keine Zuordnung</option>{assets.filter(asset => asset.id !== row?.id && asset.kind !== 'vehicle').map(asset => <option value={asset.id} key={asset.id}>{asset.name}{asset.location ? ` · ${asset.location}` : ''}</option>)}</select><small>Ordne das Fahrzeug dem passenden Gebäude, Grundstück oder technischen Standort zu.</small></label></> : <><label className="span-two">Standort / Adresse<input name="location" value={location} onChange={e => setLocation(e.target.value)} placeholder="Straße, Hausnummer, Ort" maxLength={300}/></label><div className="span-two"><AddressMap address={location}/></div></>}{select('condition', 'Zustand', conditions, 'good')}<label className="span-two upload-field">Bild für die Asset-Karte <input name="cover_image" type="file" accept=".png,.jpg,.jpeg,.webp"/><small>PNG, JPG oder WEBP · maximal 10 MB. Das Bild wird mit deinen Dokumenten gesichert.</small></label><div className="span-two form-subheading">Ansprechperson <small>Halter, Fahrer oder zuständiger Kontakt</small></div>{input('contact_first_name', 'Vorname', 'text', '', false)}{input('contact_last_name', 'Nachname', 'text', '', false)}{input('contact_birth_date', 'Geburtsdatum', 'date', '', false)}</> : resource === 'notification-recipients' ? <>{select('channel', 'Kanal', { telegram: 'Telegram' }, 'telegram')}{input('label', 'Name / Bezeichnung')}{input('address', 'Telegram Chat-ID') }<label className="span-two"><span>Empfang aktiv</span><input name="active" type="checkbox" defaultChecked={row ? String(row.active) !== 'false' : true}/></label><div className="span-two form-subheading">Erinnerungstypen</div><label className="check-field"><input name="notify_contracts" type="checkbox" defaultChecked={row ? String(row.notify_contracts) !== 'false' : true}/>Vertragsende</label><label className="check-field"><input name="notify_documents" type="checkbox" defaultChecked={row ? String(row.notify_documents) !== 'false' : true}/>Dokumente und Steuern</label><label className="check-field"><input name="notify_work_items" type="checkbox" defaultChecked={row ? String(row.notify_work_items) !== 'false' : true}/>Wartungen und Aufgaben</label></> : <>
-            <label>Asset<select name="asset_id" value={assetId} onChange={e => setAssetId(e.target.value)} required>{!assets.length && <option value="">Bitte zuerst ein Asset anlegen</option>}{assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
+            <label>{resource === 'transactions' ? 'Objekt / Asset (optional)' : 'Asset'}<select name="asset_id" value={assetId} onChange={e => setAssetId(e.target.value)} required={resource !== 'transactions'}>{resource === 'transactions' && <option value="">Allgemein / ohne Objekt</option>}{!assets.length && resource !== 'transactions' && <option value="">Bitte zuerst ein Asset anlegen</option>}{assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
             {input(resource === 'components' ? 'name' : 'title', resource === 'components' ? 'Bezeichnung' : resource === 'contracts' ? 'Vertragsname' : resource === 'documents' ? 'Dokumentbezeichnung' : resource === 'transactions' ? 'Buchungsbezeichnung' : workKind === 'maintenance' ? 'Welche Wartung?' : workKind === 'defect' ? 'Welcher Mangel?' : 'Was ist zu erledigen?')}
           </>}
           {resource === 'components' && select('kind', 'Art', { room: 'Raum', area: 'Bereich', component: 'Komponente' }, 'component')}
@@ -91,8 +93,9 @@ export default function Editor({ resource, row, assets, components, documents, d
           </>}
           {resource === 'transactions' && <>
             {select('direction', 'Buchungsart', { income: 'Einnahme', expense: 'Ausgabe' }, defaultDirection)}
+            <label>Bereich / Etage / Raum / Komponente<select name="component_id" value={String(row?.component_id || '')} disabled={!assetId} onChange={() => {}}><option value="">Gesamtes Objekt</option>{components.filter(component => String(component.asset_id) === assetId).map(component => <option value={component.id} key={component.id}>{component.name}</option>)}</select><small>{assetId ? 'Optional: genauer Bereich innerhalb des Objekts.' : 'Zuerst ein Objekt wählen, wenn die Buchung zugeordnet werden soll.'}</small></label>
             <label>Betrag in EUR<input name="amount" type="number" min="0.01" step="0.01" max="20000000" required defaultValue={row ? Number(row.amount_cents) / 100 : ''}/></label>
-            {input('booked_date', 'Datum', 'date', today())}{select('category', 'Kategorie', categories, 'other')}
+            {input('booked_date', 'Datum', 'date', today())}{select('category', 'Kategorie', transactionCategories, defaultDirection === 'income' ? 'salary' : 'other')}
           </>}
           {resource === 'documents' && <>
             {input('document_date', 'Dokumentdatum', 'date', today())}{select('category', 'Kategorie', categories, 'other')}
@@ -111,7 +114,7 @@ export default function Editor({ resource, row, assets, components, documents, d
           <label className="span-two">Notizen<textarea name="notes" rows={3} maxLength={10000} defaultValue={value('notes')} placeholder="Zusätzliche Informationen …"/></label>
         </div>
         {error && <p className="error" role="alert">{error}</p>}
-        <footer><button type="button" className="secondary" onClick={close} disabled={busy}>Abbrechen</button><button className="primary" disabled={busy || (resource !== 'assets' && resource !== 'notification-recipients' && !assets.length)}>{busy ? 'Wird gespeichert …' : 'Speichern'}</button></footer>
+        <footer><button type="button" className="secondary" onClick={close} disabled={busy}>Abbrechen</button><button className="primary" disabled={busy || (resource !== 'assets' && resource !== 'notification-recipients' && resource !== 'transactions' && !assets.length)}>{busy ? 'Wird gespeichert …' : 'Speichern'}</button></footer>
       </form>
     </section>
   </div>;
