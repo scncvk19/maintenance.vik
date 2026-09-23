@@ -1,11 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError('');
     const data = new FormData(event.currentTarget);
@@ -21,5 +23,5 @@ export default function LoginPage() {
       router.replace('/'); router.refresh();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
-  return <main className="login-shell"><section className="panel login-card"><span className="eyebrow">MAINTENANCE.VIK</span><h1>Anmelden</h1><p>Lokaler Zugang zu Assets, Wartungen, Finanzen und Dokumenten.</p><form onSubmit={submit}><label>Benutzername<input name="username" autoComplete="username" maxLength={80} required autoFocus/></label><label>Passwort<input name="password" type="password" autoComplete="current-password" maxLength={256} required/></label>{error && <p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy ? 'Anmeldung …' : 'Anmelden'}</button></form></section></main>;
+  return <main className="login-shell"><section className="panel login-card"><span className="eyebrow">MAINTENANCE.VIK</span><h1>Anmelden</h1><p>Lokaler Zugang zu Assets, Wartungen, Finanzen und Dokumenten.</p><form onSubmit={submit}><label>Benutzername<input name="username" autoComplete="username" maxLength={80} required autoFocus/></label><label>Passwort<div className="password-field"><input name="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" maxLength={256} required/><button type="button" className="password-toggle" aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'} onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff size={17}/> : <Eye size={17}/>}</button></div></label>{error && <p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy ? 'Anmeldung …' : 'Anmelden'}</button></form></section></main>;
 }
