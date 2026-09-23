@@ -21,7 +21,23 @@ export default function UserManagement() {
     if (current.role === 'admin') setUsers(await api<User[]>('auth/users'));
   }
 
-  useEffect(() => { reload().catch(e => setError((e as Error).message)); }, []);
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const current = await api<User>('auth/session');
+        if (!active) return;
+        setMe(current);
+        if (current.role === 'admin') {
+          const list = await api<User[]>('auth/users');
+          if (active) setUsers(list);
+        }
+      } catch (e) {
+        if (active) setError((e as Error).message);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   async function create(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');
