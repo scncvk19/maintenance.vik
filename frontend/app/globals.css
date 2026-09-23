@@ -81,3 +81,31 @@
 .password-toggle{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--muted);cursor:pointer}
 .password-toggle:hover{background:var(--accent-soft);color:var(--accent)}
 .password-toggle:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+
+
+/* Finance overview */
+.finance-overview{display:grid;gap:22px}
+.finance-actions{display:flex;gap:10px;flex-wrap:wrap}
+.finance-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.finance-kpi{padding:18px 20px;background:var(--surface);border:1px solid var(--line);border-radius:9px}
+.finance-kpi>span{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px}
+.finance-kpi>strong{display:block;margin-top:13px;font-size:24px;font-weight:600}
+.finance-kpi>small{display:block;margin-top:5px;font-size:9px}
+.finance-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.finance-panel{overflow:hidden}
+.finance-list{display:grid}
+.finance-list>button{display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;padding:14px 18px;border:0;border-top:1px solid var(--line);background:transparent;color:var(--text);text-align:left}
+.finance-list>button:hover{background:var(--accent-soft)}
+.finance-list>button>span{min-width:0}
+.finance-list strong{display:block;font-size:12px}
+.finance-list small{display:block;margin-top:4px;font-size:9px;overflow-wrap:anywhere}
+.finance-list b{font-size:12px;white-space:nowrap}
+.finance-assets{display:grid}
+.finance-assets>article{display:grid;grid-template-columns:minmax(220px,1.6fr) repeat(3,minmax(120px,.7fr));gap:16px;align-items:center;padding:15px 18px;border-top:1px solid var(--line)}
+.finance-assets>article>div strong{display:block;font-size:12px}
+.finance-assets>article>div small{display:block;margin-top:3px;font-size:9px}
+.finance-assets>article>span{display:flex;flex-direction:column;gap:3px}
+.finance-assets>article>span small{font-size:9px}
+.finance-assets>article>span b{font-size:12px}
+@media(max-width:1050px){.finance-kpis{grid-template-columns:repeat(2,1fr)}.finance-grid{grid-template-columns:1fr}.finance-assets>article{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.finance-kpis{grid-template-columns:1fr}.finance-assets>article{grid-template-columns:1fr}.finance-actions>*{width:100%}}
