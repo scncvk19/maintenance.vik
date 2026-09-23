@@ -54,7 +54,8 @@ class WorkItem(Base):
 class Transaction(Base):
     __tablename__ = "transactions"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    asset_id: Mapped[str] = mapped_column(ForeignKey("assets.id"))
+    asset_id: Mapped[str | None] = mapped_column(ForeignKey("assets.id"), nullable=True)
+    component_id: Mapped[str | None] = mapped_column(ForeignKey("components.id"), nullable=True)
     title: Mapped[str] = mapped_column(String(160))
     direction: Mapped[str] = mapped_column(String(20))
     amount_cents: Mapped[int] = mapped_column(Integer)
@@ -237,15 +238,17 @@ class WorkInput(Input):
 
 
 Category = Literal["energy", "tax", "insurance", "maintenance", "repair", "invoice", "rent", "other"]
+TransactionCategory = Literal["salary", "rent_income", "groceries", "energy", "water", "heating", "insurance", "maintenance", "repair", "tax", "mobility", "financing", "household", "leisure", "health", "invoice", "rent", "other"]
 
 
 class TransactionInput(Input):
-    asset_id: str
+    asset_id: str | None = None
+    component_id: str | None = None
     title: str = Field(min_length=1, max_length=160)
     direction: Literal["income", "expense"]
     amount_cents: int = Field(gt=0, le=2_000_000_000, strict=True)
     booked_date: date
-    category: Category = "other"
+    category: TransactionCategory = "other"
     notes: str = Field(default="", max_length=10000)
 
 
