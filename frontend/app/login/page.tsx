@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import PasswordInput from '../../components/password-input';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,5 +22,5 @@ export default function LoginPage() {
       router.replace('/'); router.refresh();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
-  return <main className="login-shell"><section className="panel login-card"><span className="eyebrow">MAINTENANCE.VIK</span><h1>Anmelden</h1><p>Lokaler Zugang zu Assets, Wartungen, Finanzen und Dokumenten.</p><form onSubmit={submit}><label>Benutzername<input name="username" autoComplete="username" maxLength={80} required autoFocus/></label><label>Passwort<input name="password" type="password" autoComplete="current-password" maxLength={256} required/></label>{error && <p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy ? 'Anmeldung …' : 'Anmelden'}</button></form></section></main>;
+  return <main className="login-shell"><section className="panel login-card"><span className="eyebrow">MAINTENANCE.VIK</span><h1>Anmelden</h1><p>Lokaler Zugang zu Assets, Wartungen, Finanzen und Dokumenten.</p><form onSubmit={submit}><label>Benutzername<input name="username" autoComplete="username" maxLength={80} required autoFocus/></label><label>Passwort<PasswordInput name="password" autoComplete="current-password" maxLength={256} required/></label>{error && <p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy ? 'Anmeldung …' : 'Anmelden'}</button></form></section></main>;
 }
