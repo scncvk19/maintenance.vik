@@ -1,0 +1,72 @@
+name: maintenance-vik
+
+services:
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: maintenance
+      POSTGRES_USER: maintenance
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD in .env setzen}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maintenance -d maintenance"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/scncvk19/maintenance-vik-backend:${MAINTENANCE_VIK_VERSION:-latest}
+    environment:
+      DATABASE_URL: postgresql+psycopg://maintenance:${POSTGRES_PASSWORD}@database:5432/maintenance
+      DATA_DIR: /data
+      TZ: Europe/Berlin
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_SEND_ENABLED: ${TELEGRAM_SEND_ENABLED:-no}
+    volumes:
+      - documents:/data
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  reminder-worker:
+    image: ghcr.io/scncvk19/maintenance-vik-backend:${MAINTENANCE_VIK_VERSION:-latest}
+    command: ["python", "-m", "app.telegram_worker"]
+    environment:
+      BACKEND_URL: http://backend:8000
+      TELEGRAM_SEND_ENABLED: ${TELEGRAM_SEND_ENABLED:-no}
+      TELEGRAM_CHECK_INTERVAL_SECONDS: ${TELEGRAM_CHECK_INTERVAL_SECONDS:-3600}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/scncvk19/maintenance-vik-frontend:${MAINTENANCE_VIK_VERSION:-latest}
+    environment:
+      API_URL: http://backend:8000
+      APP_AUTH_PASSWORD: ${APP_AUTH_PASSWORD:-}
+      APP_AUTH_USERS_B64: ${APP_AUTH_USERS_B64:-}
+      APP_SESSION_SECRET: ${APP_SESSION_SECRET:-}
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit([200,401].includes(r.status)?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  database:
+  documents:
