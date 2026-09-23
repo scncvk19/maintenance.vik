@@ -170,7 +170,7 @@ export default function Workspace() {
   const assets = rows.assets || [];
   const documents = rows.documents || [];
   const resource = section === 'maintenance' || section === 'tasks' || section === 'tax' ? 'work-items' : section === 'properties' || section === 'vehicles' ? 'assets' : section === 'finance' ? 'transactions' : section;
-  const assetName = (id: string | number | null) => String(assets.find(a => a.id === id)?.name || '–');
+  const assetName = (id: string | number | null) => id ? String(assets.find(a => a.id === id)?.name || '–') : 'Allgemein';
   const componentName = (id: string | number | null) => String((rows.components || []).find(component => component.id === id)?.name || 'Gesamtes Asset');
   function go(next: Section) { setSection(next); window.history.replaceState(null, '', '#' + next); setQuery(''); setFilterAsset(''); setFilterKind(''); setFilterMonth(''); setHistory(false); setMobile(false); setNotice(''); }
   async function act(action: () => Promise<unknown>, message: string) {
