@@ -116,13 +116,15 @@ def validate_backup(content):
                 for row in rows:
                     if name in {"tax-cases", "tax-attachments"}:
                         continue
-                    if name != "assets" and row["asset_id"] not in ids["assets"]:
+                    if name != "assets" and name != "transactions" and row["asset_id"] not in ids["assets"]:
+                        raise ValueError("Asset-Verknüpfung fehlt")
+                    if name == "transactions" and row.get("asset_id") and row["asset_id"] not in ids["assets"]:
                         raise ValueError("Asset-Verknüpfung fehlt")
                     if name == "assets" and row.get("cover_document_id") and row["cover_document_id"] not in ids["documents"]:
                         raise ValueError("Titelbild-Verknüpfung fehlt")
-                    if name == "work-items" and row["component_id"]:
+                    if name in {"work-items", "transactions"} and row.get("component_id"):
                         comp = components.get(row["component_id"])
-                        if not comp or comp["asset_id"] != row["asset_id"]:
+                        if not comp or comp["asset_id"] != row.get("asset_id"):
                             raise ValueError("Komponente gehört nicht zum Asset")
             if vault is not None:
                 if set(vault) != {column.name for column in TaxVault.__table__.columns} or vault.get("id") != 1:
