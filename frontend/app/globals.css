@@ -109,3 +109,12 @@
 .finance-assets>article>span b{font-size:12px}
 @media(max-width:1050px){.finance-kpis{grid-template-columns:repeat(2,1fr)}.finance-grid{grid-template-columns:1fr}.finance-assets>article{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.finance-kpis{grid-template-columns:1fr}.finance-assets>article{grid-template-columns:1fr}.finance-actions>*{width:100%}}
+
+
+.finance-filter-panel{display:flex;justify-content:space-between;align-items:end;gap:20px;padding:20px 22px}
+.finance-filter-panel>div{min-width:0}
+.finance-filter-panel h2{margin-top:5px}
+.finance-filter-panel p{margin-top:5px;color:var(--muted);font-size:11px}
+.finance-filter-panel label{display:grid;gap:6px;min-width:280px;font-size:11px;color:var(--muted)}
+.finance-filter-panel select{width:100%}
+@media(max-width:700px){.finance-filter-panel{align-items:stretch;flex-direction:column}.finance-filter-panel label{min-width:0;width:100%}}
