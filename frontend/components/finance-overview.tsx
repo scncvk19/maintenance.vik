@@ -6,6 +6,7 @@ import { billingCycles, day, money, Row, transactionCategories } from '../lib/da
 
 type Props = {
   assets: Row[];
+  components: Row[];
   transactions: Row[];
   contracts: Row[];
   onCreateIncome: (assetId?: string) => void;
@@ -22,17 +23,23 @@ function assetLabel(asset: Row | undefined, assets: Row[]) {
   return place ? `${asset.name} · ${place}` : String(asset.name);
 }
 
-export default function FinanceOverview({ assets, transactions, contracts, onCreateIncome, onCreateExpense, onCreateContract, onEditTransaction, onEditContract }: Props) {
+export default function FinanceOverview({ assets, components, transactions, contracts, onCreateIncome, onCreateExpense, onCreateContract, onEditTransaction, onEditContract }: Props) {
   const [assetFilter, setAssetFilter] = useState('');
+  const [componentFilter, setComponentFilter] = useState('');
   const selectedAsset = assets.find(asset => String(asset.id) === assetFilter);
-  const filteredTransactions = assetFilter ? transactions.filter(row => String(row.asset_id) === assetFilter) : transactions;
-  const filteredContracts = assetFilter ? contracts.filter(row => String(row.asset_id) === assetFilter) : contracts;
+  const availableComponents = selectedAsset ? components.filter(component => String(component.asset_id) === String(selectedAsset.id)) : [];
+  const filteredTransactions = assetFilter === '__general__' ? transactions.filter(row => !row.asset_id) : assetFilter ? transactions.filter(row => String(row.asset_id) === assetFilter && (!componentFilter || String(row.component_id) === componentFilter)) : transactions;
+  const filteredContracts = assetFilter === '__general__' ? [] : assetFilter ? contracts.filter(row => String(row.asset_id) === assetFilter) : contracts;
   const month = new Date().toLocaleDateString('sv-SE').slice(0, 7);
   const monthTransactions = filteredTransactions.filter(row => String(row.booked_date || '').startsWith(month));
   const monthIncome = monthTransactions.filter(row => row.direction === 'income').reduce((sum, row) => sum + Number(row.amount_cents || 0), 0);
   const monthExpense = monthTransactions.filter(row => row.direction === 'expense').reduce((sum, row) => sum + Number(row.amount_cents || 0), 0);
   const monthBalance = monthIncome - monthExpense;
   const recurringMonthly = filteredContracts.reduce((sum, row) => sum + (row.billing_cycle === 'yearly' ? Number(row.amount_cents || 0) / 12 : Number(row.amount_cents || 0)), 0);
+
+  const generalTransactions = transactions.filter(row => !row.asset_id);
+  const generalIncome = generalTransactions.filter(row => row.direction === 'income').reduce((sum, row) => sum + Number(row.amount_cents || 0), 0);
+  const generalExpense = generalTransactions.filter(row => row.direction === 'expense').reduce((sum, row) => sum + Number(row.amount_cents || 0), 0);
 
   const assetTotals = assets.map(asset => {
     const relatedTransactions = transactions.filter(row => row.asset_id === asset.id);
@@ -46,11 +53,11 @@ export default function FinanceOverview({ assets, transactions, contracts, onCre
   const activeContracts = [...filteredContracts].sort((a, b) => String(a.end_date || '').localeCompare(String(b.end_date || ''))).slice(0, 8);
 
   return <div className="finance-overview">
-    <section className="panel finance-filter-panel"><div><span className="eyebrow">OBJEKTFILTER</span><h2>{selectedAsset ? selectedAsset.name : 'Alle Objekte'}</h2><p>{selectedAsset ? assetLabel(selectedAsset, assets) : 'Gesamtübersicht über alle Immobilien, Grundstücke, Fahrzeuge und Anlagen.'}</p></div><label>Objekt auswählen<select value={assetFilter} onChange={e => setAssetFilter(e.target.value)}><option value="">Alle Objekte</option>{assets.map(asset => <option key={asset.id} value={asset.id}>{asset.name}{asset.location ? ` · ${asset.location}` : ''}</option>)}</select></label></section>
+    <section className="panel finance-filter-panel"><div><span className="eyebrow">FINANZBEREICH</span><h2>{assetFilter === '__general__' ? 'Allgemein / Haushalt' : selectedAsset ? selectedAsset.name : 'Alle Bereiche'}</h2><p>{assetFilter === '__general__' ? 'Gehalt, Lebensmittel, Freizeit und andere Buchungen ohne Objektbezug.' : selectedAsset ? assetLabel(selectedAsset, assets) : 'Gesamtübersicht über allgemeine Finanzen und alle Objekte.'}</p></div><div className="finance-filter-controls"><label>Bereich auswählen<select value={assetFilter} onChange={e => { setAssetFilter(e.target.value); setComponentFilter(''); }}><option value="">Alle Bereiche</option><option value="__general__">Allgemein / ohne Objekt</option>{assets.map(asset => <option key={asset.id} value={asset.id}>{asset.name}{asset.location ? ` · ${asset.location}` : ''}</option>)}</select></label>{selectedAsset && <label>Etage / Bereich / Raum<select value={componentFilter} onChange={e => setComponentFilter(e.target.value)}><option value="">Gesamtes Objekt</option>{availableComponents.map(component => <option key={component.id} value={component.id}>{component.name}</option>)}</select></label>}</div></section>
     <div className="finance-actions">
-      <button className="primary" onClick={() => onCreateIncome(assetFilter || undefined)}><TrendingUp size={17}/>Einnahme anlegen</button>
-      <button className="secondary" onClick={() => onCreateExpense(assetFilter || undefined)}><TrendingDown size={17}/>Ausgabe anlegen</button>
-      <button className="secondary" onClick={() => onCreateContract(assetFilter || undefined)}><FileText size={17}/>Vertrag anlegen</button>
+      <button className="primary" onClick={() => onCreateIncome(assetFilter && assetFilter !== '__general__' ? assetFilter : undefined)}><TrendingUp size={17}/>Einnahme anlegen</button>
+      <button className="secondary" onClick={() => onCreateExpense(assetFilter && assetFilter !== '__general__' ? assetFilter : undefined)}><TrendingDown size={17}/>Ausgabe anlegen</button>
+      <button className="secondary" onClick={() => onCreateContract(assetFilter && assetFilter !== '__general__' ? assetFilter : undefined)}><FileText size={17}/>Vertrag anlegen</button>
     </div>
 
     <div className="finance-kpis">
@@ -65,8 +72,9 @@ export default function FinanceOverview({ assets, transactions, contracts, onCre
         <div className="panel-heading"><div><h2>Letzte Buchungen</h2><p>Einnahmen und Ausgaben für die aktuelle Auswahl</p></div></div>
         {recentTransactions.length ? <div className="finance-list">{recentTransactions.map(row => {
           const asset = assets.find(item => item.id === row.asset_id);
+          const component = components.find(item => item.id === row.component_id);
           return <button key={row.id} onClick={() => onEditTransaction(row)}>
-            <span><strong>{row.title}</strong><small>{assetLabel(asset, assets)} · {transactionCategories[String(row.category)] || 'Sonstiges'} · {day(row.booked_date)}</small></span>
+            <span><strong>{row.title}</strong><small>{asset ? assetLabel(asset, assets) : 'Allgemein / ohne Objekt'}{component ? ` · ${component.name}` : ''} · {transactionCategories[String(row.category)] || 'Sonstiges'} · {day(row.booked_date)}</small></span>
             <b className={row.direction === 'income' ? 'positive' : 'negative'}>{row.direction === 'income' ? '+' : '−'}{money(Number(row.amount_cents || 0))}</b>
           </button>;
         })}</div> : <div className="empty compact"><p>Noch keine Buchungen vorhanden.</p></div>}
@@ -86,7 +94,7 @@ export default function FinanceOverview({ assets, transactions, contracts, onCre
 
     <section className="panel finance-panel">
       <div className="panel-heading"><div><h2>Nach Standort / Immobilie</h2><p>Finanzwerte bleiben dem jeweiligen Asset und damit seinem Standort zugeordnet.</p></div></div>
-      {assetTotals.length ? <div className="finance-assets">{assetTotals.map(({ asset, income, expense, recurring }) => <article key={asset.id}>
+      {(assetTotals.length || generalIncome || generalExpense) ? <div className="finance-assets">{(generalIncome || generalExpense) ? <article><div><strong>Allgemein / Haushalt</strong><small>Ohne Objektzuordnung</small></div><span><small>Einnahmen</small><b className="positive">{money(generalIncome)}</b></span><span><small>Ausgaben</small><b className="negative">{money(generalExpense)}</b></span><span><small>Verträge / Monat</small><b>–</b></span></article> : null}{assetTotals.map(({ asset, income, expense, recurring }) => <article key={asset.id}>
         <div><strong>{asset.name}</strong><small>{assetLabel(asset, assets).replace(String(asset.name) + ' · ', '') || 'Kein Standort hinterlegt'}</small></div>
         <span><small>Einnahmen</small><b className="positive">{money(income)}</b></span>
         <span><small>Ausgaben</small><b className="negative">{money(expense)}</b></span>
