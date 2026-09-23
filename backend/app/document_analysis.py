@@ -13,10 +13,10 @@ import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from .database import Session, UPLOADS, data_lock
-from .models import Document
+from .models import Asset, Document
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 _LIMIT_BYTES = 10 * 1024 * 1024
@@ -31,6 +31,59 @@ _RULES = {
     "rent": ("miete", "mietvertrag", "nebenkosten", "betriebskosten"),
     "invoice": ("rechnung", "quittung", "kassenbon", "beleg"),
 }
+
+_DATE_PATTERNS = (
+    re.compile(r"(?<!\d)(\d{2})[.\-/](\d{2})[.\-/](\d{4})(?!\d)"),
+    re.compile(r"(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)"),
+)
+
+
+def date_hint(text: str) -> str | None:
+    for index, pattern in enumerate(_DATE_PATTERNS):
+        match = pattern.search(text)
+        if not match:
+            continue
+        try:
+            if index == 0:
+                day, month, year = map(int, match.groups())
+            else:
+                year, month, day = map(int, match.groups())
+            from datetime import date
+            return date(year, month, day).isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+def title_hint(text: str, filename: str) -> str:
+    lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
+    lines = [line for line in lines if 4 <= len(line) <= 120]
+    for line in lines[:8]:
+        lowered = line.casefold()
+        if not re.fullmatch(r"[\d\s.,:/-]+", line) and not any(token in lowered for token in ("seite ", "page ")):
+            return line[:160]
+    stem = Path(filename).stem.replace("_", " ").replace("-", " ").strip()
+    return stem[:160] or "Dokument"
+
+
+def asset_hint(text: str, assets: list[Asset]) -> tuple[str | None, float]:
+    source = re.sub(r"[^a-z0-9äöüß]+", " ", text.casefold())
+    tokens = set(source.split())
+    best_id, best_score = None, 0.0
+    for asset in assets:
+        score = 0.0
+        name = str(asset.name or "").casefold().strip()
+        location = str(asset.location or "").casefold().strip()
+        if len(name) >= 3 and name in source:
+            score += 0.75
+        if len(location) >= 6 and location in source:
+            score += 0.95
+        asset_tokens = {token for token in re.sub(r"[^a-z0-9äöüß]+", " ", f"{name} {location} {asset.contact_last_name or ''}".casefold()).split() if len(token) >= 3}
+        overlap = tokens & asset_tokens
+        score += min(0.3, len(overlap) * 0.1)
+        if score > best_score:
+            best_id, best_score = asset.id, min(score, 1.0)
+    return (best_id, best_score) if best_score >= 0.6 else (None, best_score)
 
 
 def category_hint(text: str) -> tuple[str | None, float]:
@@ -89,6 +142,42 @@ def extract_document(path: Path, suffix: str, content: bytes) -> tuple[str, str]
             return "\n".join(_command(["tesseract", str(page), "stdout", "-l", "deu+eng"], timeout=30)
                              for page in pages), "pdf-ocr"
     raise HTTPException(415, "Texterkennung unterstützt derzeit PDF, Bilder, TXT, CSV und DOCX.")
+
+
+@router.post("/analyze-upload")
+async def analyze_upload(file: UploadFile = File(...)):
+    if not _ANALYSIS_LOCK.acquire(blocking=False):
+        raise HTTPException(429, "Die lokale Texterkennung ist beschäftigt. Bitte später erneut starten.")
+    try:
+        filename = Path((file.filename or "Dokument").replace("\\", "/")).name[:255]
+        suffix = Path(filename).suffix.lower()
+        content = await file.read(_LIMIT_BYTES + 1)
+        if len(content) > _LIMIT_BYTES:
+            raise HTTPException(413, "Texterkennung ist auf 10 MB pro Dokument begrenzt.")
+        if not content:
+            raise HTTPException(422, "Die Datei ist leer.")
+        with tempfile.TemporaryDirectory(prefix="maintenance-prefill-") as temporary:
+            path = Path(temporary) / ("upload" + suffix)
+            path.write_bytes(content)
+            extracted, source = extract_document(path, suffix, content)
+        category, confidence = category_hint(extracted)
+        with data_lock, Session() as session:
+            assets = session.query(Asset).all()
+        asset_id, asset_confidence = asset_hint(extracted, assets)
+        return {
+            "text_preview": extracted[:_MAX_TEXT],
+            "source": source,
+            "suggested_title": title_hint(extracted, filename),
+            "suggested_date": date_hint(extracted),
+            "suggested_category": category,
+            "category_confidence": confidence,
+            "suggested_asset_id": asset_id,
+            "asset_confidence": asset_confidence,
+            "review_required": True,
+            "note": "Lokale OCR-Vorschläge. Bitte vor dem Speichern prüfen.",
+        }
+    finally:
+        _ANALYSIS_LOCK.release()
 
 
 @router.post("/{document_id}/analyze")

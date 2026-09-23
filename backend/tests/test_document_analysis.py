@@ -55,3 +55,22 @@ def test_category_hint_rejects_ambiguity():
     from app.document_analysis import category_hint
     assert category_hint('Steuer und Versicherung')[0] is None
     assert category_hint('Strom Rechnung')[0] == 'energy'
+
+
+def test_preupload_analysis_suggests_form_fields_without_saving(client):
+    asset = client.post('/records/assets', json={
+        'name': 'Testhaus Heidelberg', 'kind': 'building', 'location': 'Musterweg 12 Heidelberg'
+    })
+    assert asset.status_code == 201, asset.text
+    content = b'Rechnung Strom Testhaus Heidelberg\nDatum 23.09.2026\nMusterweg 12 Heidelberg'
+    response = client.post(
+        '/documents/analyze-upload',
+        files={'file': ('stromrechnung.txt', content, 'text/plain')},
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result['suggested_category'] == 'energy'
+    assert result['suggested_date'] == '2026-09-23'
+    assert result['suggested_asset_id'] == asset.json()['id']
+    assert result['suggested_title']
+    assert client.get('/records/documents').json() == []
