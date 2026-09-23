@@ -8,9 +8,9 @@ type Props = {
   assets: Row[];
   transactions: Row[];
   contracts: Row[];
-  onCreateIncome: () => void;
-  onCreateExpense: () => void;
-  onCreateContract: () => void;
+  onCreateIncome: (assetId?: string) => void;
+  onCreateExpense: (assetId?: string) => void;
+  onCreateContract: (assetId?: string) => void;
   onEditTransaction: (row: Row) => void;
   onEditContract: (row: Row) => void;
 };
@@ -48,9 +48,9 @@ export default function FinanceOverview({ assets, transactions, contracts, onCre
   return <div className="finance-overview">
     <section className="panel finance-filter-panel"><div><span className="eyebrow">OBJEKTFILTER</span><h2>{selectedAsset ? selectedAsset.name : 'Alle Objekte'}</h2><p>{selectedAsset ? assetLabel(selectedAsset, assets) : 'Gesamtübersicht über alle Immobilien, Grundstücke, Fahrzeuge und Anlagen.'}</p></div><label>Objekt auswählen<select value={assetFilter} onChange={e => setAssetFilter(e.target.value)}><option value="">Alle Objekte</option>{assets.map(asset => <option key={asset.id} value={asset.id}>{asset.name}{asset.location ? ` · ${asset.location}` : ''}</option>)}</select></label></section>
     <div className="finance-actions">
-      <button className="primary" onClick={onCreateIncome}><TrendingUp size={17}/>Einnahme anlegen</button>
-      <button className="secondary" onClick={onCreateExpense}><TrendingDown size={17}/>Ausgabe anlegen</button>
-      <button className="secondary" onClick={onCreateContract}><FileText size={17}/>Vertrag anlegen</button>
+      <button className="primary" onClick={() => onCreateIncome(assetFilter || undefined)}><TrendingUp size={17}/>Einnahme anlegen</button>
+      <button className="secondary" onClick={() => onCreateExpense(assetFilter || undefined)}><TrendingDown size={17}/>Ausgabe anlegen</button>
+      <button className="secondary" onClick={() => onCreateContract(assetFilter || undefined)}><FileText size={17}/>Vertrag anlegen</button>
     </div>
 
     <div className="finance-kpis">
