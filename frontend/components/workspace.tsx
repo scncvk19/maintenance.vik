@@ -1,5 +1,4 @@
 'use client';
-import Image from 'next/image';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { Bell, Building2, CalendarDays, CarFront, Check, ChevronRight, CircleDollarSign, DoorOpen, Download, Eye, Factory, FileText, LandPlot, LayoutDashboard, Layers3, MapPinned, Menu, Pencil, Plus, Search, Settings2, ShieldCheck, Trash2, Upload, Wrench, X } from 'lucide-react';
 import Editor from './editor';
@@ -270,7 +269,7 @@ export default function Workspace() {
   }
   return <div className="app-shell">
     <aside className={`sidebar ${mobile ? 'is-open' : ''}`}>
-      <a className="brand" href="#dashboard" onClick={() => go('dashboard')}><Image src="/logo.png" alt="maintenance.vik" width={170} height={90} priority style={{objectFit: 'contain'}}/><span>DEIN BESTAND. IM GRIFF.</span></a>
+      <a className="brand" href="#dashboard" onClick={() => go('dashboard')}><img src="/logo.png" alt="maintenance.vik" width="170" height="90" className="brand-logo"/><span>DEIN BESTAND. IM GRIFF.</span></a>
       <span className="nav-heading">ARBEITSPLATZ</span>
       <nav aria-label="Hauptnavigation">{nav.map(([id, label, Icon]) => <button key={id} onClick={() => go(id)} className={section === id ? 'active' : ''} aria-current={section === id ? 'page' : undefined}><Icon size={19}/><span>{label}</span></button>)}</nav>
       <div className="sidebar-bottom"><span className="local-dot"/> Lokaler Arbeitsbereich<small>maintenance.vik · Version 1.0 RC</small></div>
