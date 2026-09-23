@@ -4,12 +4,12 @@ import AddressMap from './address-map';
 import { FileText, X } from 'lucide-react';
 import { api, billingCycles, categories, conditions, json, kinds, Row, statuses, today, transactionCategories, workKinds } from '../lib/data';
 
-type Props = { resource: string; row?: Row; assets: Row[]; components: Row[]; documents: Row[]; defaultKind?: string; defaultAssetId?: string; defaultDueDate?: string; defaultDirection?: 'income' | 'expense'; close: () => void; saved: () => Promise<void> };
-export default function Editor({ resource, row, assets, components, documents, defaultKind, defaultAssetId, defaultDueDate, defaultDirection = 'expense', close, saved }: Props) {
+type Props = { resource: string; row?: Row; assets: Row[]; components: Row[]; documents: Row[]; defaultKind?: string; defaultAssetId?: string; defaultComponentId?: string; defaultDueDate?: string; defaultDirection?: 'income' | 'expense'; close: () => void; saved: () => Promise<void> };
+export default function Editor({ resource, row, assets, components, documents, defaultKind, defaultAssetId, defaultComponentId, defaultDueDate, defaultDirection = 'expense', close, saved }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [assetId, setAssetId] = useState(String(row?.asset_id || defaultAssetId || (resource === 'transactions' ? '' : assets[0]?.id || '')));
-  const [componentId, setComponentId] = useState(String(row?.component_id || ''));
+  const [componentId, setComponentId] = useState(String(row?.component_id || defaultComponentId || ''));
   const [assetKind, setAssetKind] = useState(String(row?.kind || 'building'));
   const [propertyId, setPropertyId] = useState(String(row?.property_id || ''));
   const [location, setLocation] = useState(String(row?.location || ''));
