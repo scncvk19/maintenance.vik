@@ -3,3 +3,7 @@ node_modules
 test-results
 playwright-report
 *.tsbuildinfo
+tests
+playwright.config.ts
+AGENTS.md
+CLAUDE.md
