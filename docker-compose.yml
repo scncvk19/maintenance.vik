@@ -33,6 +33,17 @@ services:
       timeout: 5s
       retries: 12
     restart: unless-stopped
+  reminder-worker:
+    build: ./backend
+    command: ["python", "-m", "app.telegram_worker"]
+    environment:
+      BACKEND_URL: http://backend:8000
+      TELEGRAM_SEND_ENABLED: ${TELEGRAM_SEND_ENABLED:-no}
+      TELEGRAM_CHECK_INTERVAL_SECONDS: ${TELEGRAM_CHECK_INTERVAL_SECONDS:-3600}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
   frontend:
     build: ./frontend
     environment:
