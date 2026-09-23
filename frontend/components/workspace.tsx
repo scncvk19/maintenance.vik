@@ -55,10 +55,10 @@ function AssetGallery({ assets, allAssets, workItems, onOpen, onEdit, onDelete }
 }
 
 function ComponentGallery({ components, assetName, onEdit, onDelete }: { components: Row[]; assetName: (id: string | number | null) => string; onEdit: (row: Row) => void; onDelete: (row: Row) => void }) {
-  const labels = { room: 'Raum', area: 'Bereich', component: 'Komponente' } as Record<string, string>;
+  const labels = { room: 'Raum', floor: 'Etage', area: 'Bereich', component: 'Komponente' } as Record<string, string>;
   return <div className="component-gallery" aria-label="Räume und Komponenten">
     {components.map(item => {
-      const Icon = item.kind === 'room' ? DoorOpen : item.kind === 'area' ? MapPinned : Wrench;
+      const Icon = item.kind === 'room' ? DoorOpen : item.kind === 'floor' ? Layers3 : item.kind === 'area' ? MapPinned : Wrench;
       return <article className={`component-card ${item.kind}`} key={item.id}>
         <span className="component-icon"><Icon size={26}/></span>
         <div className="component-card-content"><span className="badge open">{labels[String(item.kind)]}</span><h2>{item.name}</h2><p>{assetName(item.asset_id)}</p>{item.notes && <small>{String(item.notes).slice(0, 120)}</small>}</div>
