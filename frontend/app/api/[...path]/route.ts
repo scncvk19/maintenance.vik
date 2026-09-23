@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { sessionCookieName } from '../../../lib/auth';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 const MAX_BODY = 251 * 1024 * 1024;
@@ -31,6 +32,8 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     const upstreamHeaders: Record<string, string> = { 'Content-Type': request.headers.get('content-type') || 'application/json' };
     const taxSession = request.headers.get('x-tax-session');
     if (taxSession) upstreamHeaders['X-Tax-Session'] = taxSession;
+    const appSession = request.cookies.get(sessionCookieName())?.value;
+    if (appSession) upstreamHeaders['X-App-Session'] = appSession;
     if (request.method === 'POST' && path.join('/') === 'notifications/telegram/send' && request.headers.get('x-confirm-send') === 'SEND_TELEGRAM') {
       upstreamHeaders['X-Confirm-Send'] = 'SEND_TELEGRAM';
     }
