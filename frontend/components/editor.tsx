@@ -14,6 +14,11 @@ export default function Editor({ resource, row, assets, components, documents, d
   const [propertyId, setPropertyId] = useState(String(row?.property_id || ''));
   const [location, setLocation] = useState(String(row?.location || ''));
   const [workKind, setWorkKind] = useState(String(row?.kind || defaultKind || 'task'));
+  const [documentTitle, setDocumentTitle] = useState(String(row?.title || ''));
+  const [documentDate, setDocumentDate] = useState(String(row?.document_date || today()));
+  const [documentCategory, setDocumentCategory] = useState(String(row?.category || 'other'));
+  const [documentAnalysis, setDocumentAnalysis] = useState('');
+  const [documentAnalyzing, setDocumentAnalyzing] = useState(false);
   const selectedAsset = assets.find(asset => String(asset.id) === assetId);
   const value = (name: string, fallback = '') => String(row?.[name] ?? fallback);
   const select = (name: string, label: string, options: Record<string, string>, fallback = '') => <label>{label}<select name={name} defaultValue={value(name, fallback)}>{Object.entries(options).map(([key, text]) => <option value={key} key={key}>{text}</option>)}</select></label>;
@@ -34,8 +39,7 @@ export default function Editor({ resource, row, assets, components, documents, d
           await api(`assets/${savedAsset.id}/image`, { method: 'POST', body: upload });
         }
       } else if (resource === 'documents' && !row) {
-        const savedDocument = await api<Row>('documents/upload', { method: 'POST', body: data });
-        if (data.get('auto_match') === 'on') await api(`documents/${savedDocument.id}/suggest-asset`, { method: 'POST' });
+        await api<Row>('documents/upload', { method: 'POST', body: data });
       } else {
         const body: Record<string, unknown> = Object.fromEntries(data.entries());
         if (resource === 'transactions') {
@@ -76,6 +80,33 @@ export default function Editor({ resource, row, assets, components, documents, d
       await saved(); close();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
+
+  async function analyzeSelectedDocument(file: File | null) {
+    if (!file) return;
+    setDocumentAnalyzing(true); setError(''); setDocumentAnalysis('Dokument wird lokal analysiert …');
+    try {
+      const body = new FormData(); body.set('file', file);
+      const result = await api<{
+        suggested_title: string;
+        suggested_date: string | null;
+        suggested_category: string | null;
+        suggested_asset_id: string | null;
+        text_preview: string;
+        source: string;
+      }>('documents/analyze-upload', { method: 'POST', body });
+      if (result.suggested_title) setDocumentTitle(result.suggested_title);
+      if (result.suggested_date) setDocumentDate(result.suggested_date);
+      if (result.suggested_category) setDocumentCategory(result.suggested_category);
+      if (result.suggested_asset_id) setAssetId(result.suggested_asset_id);
+      setDocumentAnalysis(`OCR abgeschlossen (${result.source}). Vorschläge wurden eingetragen – bitte kurz prüfen.`);
+    } catch (e) {
+      setDocumentAnalysis('OCR konnte keine Vorschläge übernehmen. Das Dokument kann trotzdem manuell gespeichert werden.');
+      setError((e as Error).message);
+    } finally {
+      setDocumentAnalyzing(false);
+    }
+  }
+
   return <div className="overlay" onClick={e => { if (e.target === e.currentTarget && !busy) close(); }}>
     <section role="dialog" aria-modal="true" aria-labelledby="editor-title" className="modal">
       <header><div><span className="eyebrow">BESTAND VERWALTEN</span><h2 id="editor-title">{row ? 'Eintrag bearbeiten' : resource === 'documents' ? 'Dokument hochladen' : resource === 'contracts' ? 'Vertrag anlegen' : resource === 'notification-recipients' ? 'Empfänger anlegen' : 'Neuen Eintrag anlegen'}</h2></div><button className="icon-button" aria-label="Schließen" onClick={close} disabled={busy}><X size={20}/></button></header>
@@ -83,7 +114,9 @@ export default function Editor({ resource, row, assets, components, documents, d
         <div className="form-grid">
           {resource === 'assets' ? <>{input('name', 'Bezeichnung')}<label>Bereich<select name="kind" value={assetKind} onChange={event => setAssetKind(event.target.value)}>{Object.entries(kinds).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>{assetKind === 'vehicle' ? <><label className="span-two">Standort / Stellplatz <input name="location" value={location} onChange={e => setLocation(e.target.value)} placeholder="Garage, Stellplatz oder Standort" maxLength={300}/></label><label className="span-two">Zugeordnet zu Immobilie <select name="property_id" value={propertyId} onChange={e => setPropertyId(e.target.value)}><option value="">Keine Zuordnung</option>{assets.filter(asset => asset.id !== row?.id && asset.kind !== 'vehicle').map(asset => <option value={asset.id} key={asset.id}>{asset.name}{asset.location ? ` · ${asset.location}` : ''}</option>)}</select><small>Ordne das Fahrzeug dem passenden Gebäude, Grundstück oder technischen Standort zu.</small></label></> : <><label className="span-two">Standort / Adresse<input name="location" value={location} onChange={e => setLocation(e.target.value)} placeholder="Straße, Hausnummer, Ort" maxLength={300}/></label><div className="span-two"><AddressMap address={location}/></div></>}{select('condition', 'Zustand', conditions, 'good')}<label className="span-two upload-field">Bild für die Asset-Karte <input name="cover_image" type="file" accept=".png,.jpg,.jpeg,.webp"/><small>PNG, JPG oder WEBP · maximal 10 MB. Das Bild wird mit deinen Dokumenten gesichert.</small></label><div className="span-two form-subheading">Ansprechperson <small>Halter, Fahrer oder zuständiger Kontakt</small></div>{input('contact_first_name', 'Vorname', 'text', '', false)}{input('contact_last_name', 'Nachname', 'text', '', false)}{input('contact_birth_date', 'Geburtsdatum', 'date', '', false)}</> : resource === 'notification-recipients' ? <>{select('channel', 'Kanal', { telegram: 'Telegram' }, 'telegram')}{input('label', 'Name / Bezeichnung')}{input('address', 'Telegram Chat-ID') }<label className="span-two"><span>Empfang aktiv</span><input name="active" type="checkbox" defaultChecked={row ? String(row.active) !== 'false' : true}/></label><div className="span-two form-subheading">Erinnerungstypen</div><label className="check-field"><input name="notify_contracts" type="checkbox" defaultChecked={row ? String(row.notify_contracts) !== 'false' : true}/>Vertragsende</label><label className="check-field"><input name="notify_documents" type="checkbox" defaultChecked={row ? String(row.notify_documents) !== 'false' : true}/>Dokumente und Steuern</label><label className="check-field"><input name="notify_work_items" type="checkbox" defaultChecked={row ? String(row.notify_work_items) !== 'false' : true}/>Wartungen und Aufgaben</label></> : <>
             <label>{resource === 'transactions' ? 'Objekt / Asset (optional)' : 'Asset'}<select name="asset_id" value={assetId} onChange={e => { setAssetId(e.target.value); setComponentId(''); }} required={resource !== 'transactions'}>{resource === 'transactions' && <option value="">Allgemein / ohne Objekt</option>}{!assets.length && resource !== 'transactions' && <option value="">Bitte zuerst ein Asset anlegen</option>}{assets.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
-            {input(resource === 'components' ? 'name' : 'title', resource === 'components' ? 'Bezeichnung' : resource === 'contracts' ? 'Vertragsname' : resource === 'documents' ? 'Dokumentbezeichnung' : resource === 'transactions' ? 'Buchungsbezeichnung' : workKind === 'maintenance' ? 'Welche Wartung?' : workKind === 'defect' ? 'Welcher Mangel?' : 'Was ist zu erledigen?')}
+            {resource === 'documents'
+              ? <label>Dokumentbezeichnung<input name="title" value={documentTitle} onChange={e => setDocumentTitle(e.target.value)} required maxLength={160}/></label>
+              : input(resource === 'components' ? 'name' : 'title', resource === 'components' ? 'Bezeichnung' : resource === 'contracts' ? 'Vertragsname' : resource === 'transactions' ? 'Buchungsbezeichnung' : workKind === 'maintenance' ? 'Welche Wartung?' : workKind === 'defect' ? 'Welcher Mangel?' : 'Was ist zu erledigen?')}
           </>}
           {resource === 'components' && select('kind', 'Art', { room: 'Raum', floor: 'Etage', area: 'Bereich', component: 'Komponente' }, 'component')}
           {resource === 'work-items' && <>
@@ -99,9 +132,10 @@ export default function Editor({ resource, row, assets, components, documents, d
             {input('booked_date', 'Datum', 'date', today())}{select('category', 'Kategorie', transactionCategories, defaultDirection === 'income' ? 'salary' : 'other')}
           </>}
           {resource === 'documents' && <>
-            {input('document_date', 'Dokumentdatum', 'date', today())}{select('category', 'Kategorie', categories, 'other')}
+            <label>Dokumentdatum<input name="document_date" type="date" value={documentDate} onChange={e => setDocumentDate(e.target.value)} required/></label>
+            <label>Kategorie<select name="category" value={documentCategory} onChange={e => setDocumentCategory(e.target.value)}>{Object.entries(categories).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
             {input('reminder_date', 'Erinnerung am (optional)', 'date', '', false)}<label>Erinnerung vorher (Tage)<input name="reminder_days" type="number" min="0" max="365" defaultValue={value('reminder_days', '30')}/></label>
-            {!row && <><label className="span-two upload-field">Datei auswählen<input name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.docx,.xlsx" required/><small>PDF, Bilder oder Dokumente · maximal 25 MB. Fotos und Scans vom Smartphone sind möglich.</small></label><label className="span-two check-field"><input name="auto_match" type="checkbox" defaultChecked/>Objekt anhand von Adresse, Objektname und Kontaktangaben automatisch vorschlagen</label></>}
+            {!row && <><label className="span-two upload-field">Datei auswählen<input name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.docx,.xlsx" required onChange={e => void analyzeSelectedDocument(e.target.files?.[0] || null)}/><small>Nach der Auswahl versucht die lokale OCR automatisch Bezeichnung, Datum, Kategorie und Objekt vorzuschlagen.</small></label>{documentAnalysis && <div className="span-two info-strip"><FileText size={17}/>{documentAnalysis}</div>}</>}
           </>}
           {resource === 'contracts' && <>
             {input('provider', 'Anbieter', 'text', '', false)}{selectedAsset?.kind !== 'vehicle' && input('market_location_id', 'Marktlokations-ID (nur Energievertrag)', 'text', '', false)}
@@ -115,7 +149,7 @@ export default function Editor({ resource, row, assets, components, documents, d
           <label className="span-two">Notizen<textarea name="notes" rows={3} maxLength={10000} defaultValue={value('notes')} placeholder="Zusätzliche Informationen …"/></label>
         </div>
         {error && <p className="error" role="alert">{error}</p>}
-        <footer><button type="button" className="secondary" onClick={close} disabled={busy}>Abbrechen</button><button className="primary" disabled={busy || (resource !== 'assets' && resource !== 'notification-recipients' && resource !== 'transactions' && !assets.length)}>{busy ? 'Wird gespeichert …' : 'Speichern'}</button></footer>
+        <footer><button type="button" className="secondary" onClick={close} disabled={busy}>Abbrechen</button><button className="primary" disabled={busy || documentAnalyzing || (resource !== 'assets' && resource !== 'notification-recipients' && resource !== 'transactions' && !assets.length)}>{documentAnalyzing ? 'OCR läuft …' : busy ? 'Wird gespeichert …' : 'Speichern'}</button></footer>
       </form>
     </section>
   </div>;
