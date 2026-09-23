@@ -4,6 +4,26 @@ export const kinds: Record<string, string> = { building: 'Gebäude', vehicle: 'F
 export const conditions: Record<string, string> = { good: 'Gut', attention: 'Beobachten', critical: 'Kritisch' };
 export const statuses: Record<string, string> = { open: 'Offen', in_progress: 'In Arbeit', done: 'Erledigt' };
 export const categories: Record<string, string> = { energy: 'Energie', tax: 'Steuer', insurance: 'Versicherung', maintenance: 'Wartung', repair: 'Reparatur', invoice: 'Rechnung', rent: 'Miete', other: 'Sonstiges' };
+export const transactionCategories: Record<string, string> = {
+  salary: 'Gehalt / Lohn',
+  rent_income: 'Mieteinnahmen',
+  groceries: 'Lebensmittel',
+  energy: 'Strom / Energie',
+  water: 'Wasser',
+  heating: 'Heizung',
+  insurance: 'Versicherung',
+  maintenance: 'Wartung',
+  repair: 'Reparatur',
+  tax: 'Steuern / Abgaben',
+  mobility: 'Mobilität / Fahrzeug',
+  financing: 'Kredit / Finanzierung',
+  household: 'Haushalt',
+  leisure: 'Freizeit',
+  health: 'Gesundheit',
+  invoice: 'Rechnung',
+  rent: 'Miete',
+  other: 'Sonstiges',
+};
 export const billingCycles: Record<string, string> = { monthly: 'Monatlich', yearly: 'Jährlich' };
 export const workKinds: Record<string, string> = { maintenance: 'Wartung', task: 'Aufgabe', defect: 'Mangel', appointment: 'Termin', tax_return: 'Steuererklärung' };
 export const money = (cents: number) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
