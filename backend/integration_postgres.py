@@ -5,7 +5,6 @@ loopback host, and an explicit opt-in; it creates and restores records.
 """
 import os
 import tempfile
-from pathlib import Path
 from sqlalchemy.engine import make_url
 
 EXPECTED = "postgresql+psycopg://maintenance_ci_test:test-only-postgres-password@127.0.0.1:5432/maintenance_ci_test"
@@ -22,7 +21,6 @@ os.environ["DATA_DIR"] = temporary.name
 from fastapi.testclient import TestClient  # noqa: E402
 from app.database import engine  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import Base  # noqa: E402
 
 assert engine.dialect.name == "postgresql"
 
