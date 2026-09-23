@@ -146,7 +146,7 @@ export default function Editor({ resource, row, assets, components, documents, d
             <label>Erinnerung vor Vertragsende (Tage)<input name="reminder_days" type="number" min="0" max="365" defaultValue={value('reminder_days', '30')}/></label>
             <div className="span-two info-strip"><FileText size={17}/>Vertragsdokumente können zugeordnet werden. Die automatische KI-Erkennung von Anbieter, Laufzeit, Betrag und MaLo-ID ist vorbereitet.</div>
           </>}
-          <label className="span-two">Notizen<textarea name="notes" rows={3} maxLength={10000} defaultValue={value('notes')} placeholder="Zusätzliche Informationen …"/></label>
+          {resource !== 'notification-recipients' && <label className="span-two">Notizen<textarea name="notes" rows={3} maxLength={10000} defaultValue={value('notes')} placeholder="Zusätzliche Informationen …"/></label>}
         </div>
         {error && <p className="error" role="alert">{error}</p>}
         <footer><button type="button" className="secondary" onClick={close} disabled={busy}>Abbrechen</button><button className="primary" disabled={busy || documentAnalyzing || (resource !== 'assets' && resource !== 'notification-recipients' && resource !== 'transactions' && !assets.length)}>{documentAnalyzing ? 'OCR läuft …' : busy ? 'Wird gespeichert …' : 'Speichern'}</button></footer>
