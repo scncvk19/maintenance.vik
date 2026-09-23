@@ -67,10 +67,6 @@ TELEGRAM_SEND_ENABLED=YES_I_CONFIGURED_THE_BOT
 
 Danach die Container neu erstellen. In **Einstellungen & Backup → Telegram** zuerst die Vorschau laden. Der Versand überträgt nur Anzahlen fälliger Aufgaben/Wartungen, Verträge und Dokumenterinnerungen; keine Titel, Adressen, Beträge oder Steuerinhalte. Doppelte Sendungen an denselben Chat werden pro Kalendertag unterdrückt.
 
-## Optionaler WhatsApp-Kanal
-
-Ein datensparsamer WhatsApp-Cloud-API-Kanal ist optional verfügbar und standardmäßig deaktiviert. Er verwendet ein freigegebenes Template und überträgt nur Erinnerungsanzahlen. Einrichtung: `docs/whatsapp.md`.
-
 ## Funktionsbereiche
 
 - Immobilien, Grundstücke, Fahrzeuge und technische Anlagen
