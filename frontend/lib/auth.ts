@@ -2,12 +2,35 @@ import { createHmac, pbkdf2Sync, timingSafeEqual } from 'node:crypto';
 
 export type AppRole = 'admin' | 'viewer';
 type StoredUser = { username: string; role: AppRole; salt: string; hash: string };
-export type SessionUser = { username: string; role: AppRole };
+export type SessionUser = { id?: string; username: string; role: AppRole; active?: boolean };
 
 const COOKIE_NAME = 'mvik_session';
 const SESSION_SECONDS = 12 * 60 * 60;
 
 export function sessionCookieName() { return COOKIE_NAME; }
+
+export function backendUrl(path: string) {
+  return `${process.env.API_URL || 'http://127.0.0.1:8000'}${path}`;
+}
+
+export async function databaseAuthStatus(): Promise<{setup_required: boolean; user_count: number}> {
+  const response = await fetch(backendUrl('/auth/status'), { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+  if (!response.ok) throw new Error('Authentifizierungsstatus nicht erreichbar.');
+  return response.json();
+}
+
+export async function databaseSession(token: string | undefined): Promise<SessionUser | null> {
+  if (!token) return null;
+  try {
+    const response = await fetch(backendUrl('/auth/session'), {
+      headers: { 'X-App-Session': token }, cache: 'no-store', signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
 
 function configuredUsers(): StoredUser[] {
   const encoded = process.env.APP_AUTH_USERS_B64 || '';

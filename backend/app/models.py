@@ -109,6 +109,24 @@ class NotificationRecipient(Base):
     notify_work_items: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
+class AppUser(Base):
+    __tablename__ = "app_users"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    username: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    role: Mapped[str] = mapped_column(String(20), default="viewer")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    password_salt: Mapped[str] = mapped_column(String(64))
+    password_hash: Mapped[str] = mapped_column(String(128))
+    created_at: Mapped[str] = mapped_column(String(64))
+
+
+class AppSession(Base):
+    __tablename__ = "app_sessions"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("app_users.id"), index=True)
+    expires_at: Mapped[str] = mapped_column(String(64))
+
+
 class Person(Base):
     __tablename__ = "people"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)

@@ -46,3 +46,15 @@
 .activity-row>div{display:flex;flex-direction:column;gap:2px;min-width:0}
 .activity-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:900px){.global-search{order:3;width:100%;max-width:none;margin:8px 0 0}.topbar{flex-wrap:wrap}.global-search-results{left:0;right:0}}
+
+
+/* First-run setup and user management */
+.user-management .error,.user-management .notice{margin-top:14px}
+.user-list{display:grid;gap:10px;margin-top:16px}
+.user-row{display:grid;grid-template-columns:minmax(120px,1fr) 140px auto minmax(170px,1fr) auto auto;gap:8px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--bg)}
+.user-row input,.user-row select,.user-create input,.user-create select{width:100%}
+.user-create{display:grid;grid-template-columns:1fr 160px 1fr auto;gap:10px;align-items:end}
+.user-create label{display:grid;gap:6px;font-size:12px}
+.login-card small{color:var(--muted);font-size:10px}
+@media(max-width:900px){.user-row,.user-create{grid-template-columns:1fr 1fr}.user-row .danger-button,.user-row .secondary{width:100%}}
+@media(max-width:600px){.user-row,.user-create{grid-template-columns:1fr}.user-row{align-items:stretch}}
