@@ -273,7 +273,7 @@ export default function Workspace() {
       <a className="brand" href="#dashboard" onClick={() => go('dashboard')}><Image src="/logo.png" alt="maintenance.vik" width={170} height={90} priority style={{objectFit: 'contain'}}/><span>DEIN BESTAND. IM GRIFF.</span></a>
       <span className="nav-heading">ARBEITSPLATZ</span>
       <nav aria-label="Hauptnavigation">{nav.map(([id, label, Icon]) => <button key={id} onClick={() => go(id)} className={section === id ? 'active' : ''} aria-current={section === id ? 'page' : undefined}><Icon size={19}/><span>{label}</span></button>)}</nav>
-      <div className="sidebar-bottom"><span className="local-dot"/> Lokaler Arbeitsbereich<small>maintenance.vik · Version 0.1</small></div>
+      <div className="sidebar-bottom"><span className="local-dot"/> Lokaler Arbeitsbereich<small>maintenance.vik · Version 1.0 RC</small></div>
     </aside>
     {mobile && <button className="sidebar-shade" aria-label="Menü schließen" onClick={() => setMobile(false)}/>}
     <div className="main-shell">
