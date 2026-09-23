@@ -11,11 +11,7 @@ export default function AddressMap({ address }: Props) {
 
   useEffect(() => {
     const next = address.trim();
-    if (!next) {
-      setQuery('');
-      return;
-    }
-    const timer = window.setTimeout(() => setQuery(next), 700);
+    const timer = window.setTimeout(() => setQuery(next), next ? 700 : 0);
     return () => window.clearTimeout(timer);
   }, [address]);
 
