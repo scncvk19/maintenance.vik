@@ -1,5 +1,4 @@
 'use client';
-import Image from 'next/image';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { Bell, Building2, CalendarDays, CarFront, Check, ChevronRight, CircleDollarSign, DoorOpen, Download, Eye, Factory, FileText, LandPlot, LayoutDashboard, Layers3, MapPinned, Menu, Pencil, Plus, Search, Settings2, ShieldCheck, Trash2, Upload, Wrench, X } from 'lucide-react';
 import Editor from './editor';
