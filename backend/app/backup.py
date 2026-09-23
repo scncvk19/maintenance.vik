@@ -80,6 +80,8 @@ def validate_backup(content):
                 parsed[name] = []
                 ids[name] = set()
                 for row in data[name]:
+                    if name == "transactions" and "component_id" not in row:
+                        row = {**row, "component_id": None}
                     if set(row) != {c.name for c in model.__table__.columns}:
                         raise ValueError("Ungültige Datenfelder")
                     UUID(row["id"])
