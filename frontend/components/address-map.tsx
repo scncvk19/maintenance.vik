@@ -1,13 +1,20 @@
 'use client';
 
 import { Map, Satellite } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Props = { address: string };
 
 export default function AddressMap({ address }: Props) {
   const [mode, setMode] = useState<'map' | 'satellite'>('map');
-  const query = address.trim();
+  const [query, setQuery] = useState(address.trim());
+
+  useEffect(() => {
+    const next = address.trim();
+    const timer = window.setTimeout(() => setQuery(next), next ? 700 : 0);
+    return () => window.clearTimeout(timer);
+  }, [address]);
+
   const src = useMemo(() => query
     ? `https://www.google.com/maps?q=${encodeURIComponent(query)}&t=${mode === 'satellite' ? 'k' : 'm'}&z=16&output=embed`
     : '', [mode, query]);
