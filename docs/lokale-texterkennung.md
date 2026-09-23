@@ -1,7 +1,17 @@
 # Lokale Texterkennung – kontrollierte Vorschau
 
-Unter `/document-analysis` kann ein **bereits hochgeladenes Dokument** bewusst zur Texterkennung ausgewählt werden. Die Analyse erfolgt im Backend-Container mit Tesseract (Deutsch/Englisch) und Poppler. Es werden **keine Cloud-, KI- oder externen OCR-APIs** aufgerufen. Die PDF-Textextraktion wird zuerst versucht; bei Scans wird OCR auf höchstens die ersten drei PDF-Seiten angewandt. Bilder (PNG/JPG/WEBP), TXT, CSV und DOCX werden unterstützt. XLSX ist derzeit nicht analysierbar.
+Die Dokumentanalyse ist direkt in der normalen Dokumentverwaltung integriert.
 
-**Grenzen:** maximal 10 MB pro Dokument, 1.800 Zeichen Vorschau, Zeitlimits für lokale Prozesse. Schlechte Scanqualität, handschriftliche Texte und zusammengesetzte Wörter können falsch erkannt werden. Kategorien sind regelbasierte Vorschläge, keine verlässlichen Steuer- oder Vertragsentscheidungen. Bestehende Kategorie, Notizen, Dokument und Backup bleiben bei der Analyse unverändert. Die Vorschau kann sensible Textstellen enthalten: nicht in Tickets/Screenshots veröffentlichen.
+Beim Auswählen eines neuen Dokuments kann maintenance.vik lokal Titel, Dokumentdatum, Kategorie und eine passende Asset-Zuordnung vorschlagen. Bereits gespeicherte Dokumente lassen sich zusätzlich über **Lokal analysieren** prüfen.
 
-Nach `git pull --ff-only` muss der Backend-Container für die neuen Systempakete **neu gebaut** werden. Erst mit geprüfter Sicherung und in einer getrennten Testinstallation ausprobieren. `docker compose -p maintenance-vik-test up -d --build --wait` im Testordner verwendet eigene Datenbank-/Dokumentenvolumes. Ein Import ersetzt ausschließlich Daten der gewählten Instanz – niemals den Backup-Import in der Produktivinstallation testen.
+Die Analyse erfolgt im Backend-Container mit Tesseract (Deutsch/Englisch) und Poppler. Es werden **keine Cloud-, KI- oder externen OCR-APIs** aufgerufen. Bei PDFs wird zuerst die vorhandene Textebene verwendet; bei Scans wird OCR auf höchstens die ersten drei PDF-Seiten angewandt. Bilder (PNG/JPG/WEBP), TXT, CSV und DOCX werden unterstützt.
+
+**Grenzen:** maximal 10 MB für die Analyse und höchstens drei PDF-Seiten bei OCR. Schlechte Scanqualität, Handschrift und ungewöhnliche Layouts können falsche Ergebnisse liefern. Vorschläge bleiben deshalb vor dem Speichern korrigierbar.
+
+Nach Änderungen an OCR-Systempaketen muss der Backend-Container neu gebaut werden:
+
+```powershell
+docker compose up -d --build
+```
+
+Backup-Restore-Tests sollten ausschließlich mit einer geprüften Sicherung beziehungsweise einer isolierten Testinstallation durchgeführt werden.
