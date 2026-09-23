@@ -1,11 +1,8 @@
 """All tests use isolated SQLite; Telegram network calls are replaced by a stub."""
 from datetime import date
 
-from fastapi.testclient import TestClient
-
 from app.database import Session
 from app.models import Asset, NotificationRecipient, WorkItem
-from app.server import app
 from app import telegram_reminders as reminders
 
 
