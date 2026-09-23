@@ -20,27 +20,16 @@ from .models import Contract, Document, NotificationRecipient, WorkItem
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 SENT_FILE = DATA_DIR / "telegram-sent.json"
 SETTINGS_FILE = DATA_DIR / "telegram-settings.json"
-SETTINGS_KEY_FILE = DATA_DIR / ".telegram-settings.key"
 TOKEN_PATTERN = re.compile(r"^[0-9]{5,15}:[A-Za-z0-9_-]{30,}$")
 CHAT_PATTERN = re.compile(r"^-?[0-9]{5,20}$")
 
 
 
 def _settings_key() -> bytes:
-    if SETTINGS_KEY_FILE.exists():
-        try:
-            key = base64.urlsafe_b64decode(SETTINGS_KEY_FILE.read_text(encoding="ascii"))
-            if len(key) == 32:
-                return key
-        except Exception:
-            pass
-        raise HTTPException(503, "Telegram-Konfigurationsschlüssel ist beschädigt.")
-    key = secrets.token_bytes(32)
-    temp = SETTINGS_KEY_FILE.with_suffix(".tmp")
-    temp.write_text(base64.urlsafe_b64encode(key).decode("ascii"), encoding="ascii")
-    os.chmod(temp, 0o600)
-    os.replace(temp, SETTINGS_KEY_FILE)
-    return key
+    database_url = os.getenv("DATABASE_URL", "")
+    if not database_url:
+        raise HTTPException(503, "Serverseitiger Schlüssel für Telegram-Konfiguration fehlt.")
+    return hashlib.sha256(("maintenance.vik.telegram.settings.v1:" + database_url).encode("utf-8")).digest()
 
 
 def _load_stored_settings() -> dict | None:
