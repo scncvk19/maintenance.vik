@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { api, json } from '../lib/data';
 
 type User = { id: string; username: string; role: 'admin' | 'viewer'; active: boolean; created_at: string };
@@ -14,6 +15,7 @@ export default function UserManagement() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [showPasswords, setShowPasswords] = useState(false);
 
   async function reload() {
     const current = await api<User>('auth/session');
@@ -80,7 +82,7 @@ export default function UserManagement() {
         <input aria-label="Benutzername" value={user.username} disabled={busy} onChange={e => setUsers(rows => rows.map((row, i) => i === index ? {...row, username:e.target.value} : row))}/>
         <select aria-label="Rolle" value={user.role} disabled={busy} onChange={e => setUsers(rows => rows.map((row, i) => i === index ? {...row, role:e.target.value as 'admin'|'viewer'} : row))}><option value="admin">Administrator</option><option value="viewer">Viewer</option></select>
         <label className="check-field"><input type="checkbox" checked={user.active} disabled={busy} onChange={e => setUsers(rows => rows.map((row, i) => i === index ? {...row, active:e.target.checked} : row))}/>Aktiv</label>
-        <input aria-label="Neues Passwort" type="password" placeholder="Neues Passwort (optional)" minLength={12} disabled={busy} value={user.password || ''} onChange={e => setUsers(rows => rows.map((row, i) => i === index ? {...row, password:e.target.value} : row))}/>
+        <div className="password-field"><input aria-label="Neues Passwort" type={showPasswords ? 'text' : 'password'} placeholder="Neues Passwort (optional)" minLength={12} disabled={busy} value={user.password || ''} onChange={e => setUsers(rows => rows.map((row, i) => i === index ? {...row, password:e.target.value} : row))}/><button type="button" className="password-toggle" aria-label={showPasswords ? 'Passwörter verbergen' : 'Passwörter anzeigen'} onClick={() => setShowPasswords(value => !value)}>{showPasswords ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div>
         <button className="secondary" disabled={busy} onClick={() => save(user)}>Speichern</button>
         <button className="danger-button" disabled={busy || user.id === me.id} onClick={() => remove(user)}>Löschen</button>
       </div>)}
@@ -90,7 +92,7 @@ export default function UserManagement() {
     <form className="user-create" onSubmit={create}>
       <label>Benutzername<input value={username} pattern="[A-Za-z0-9._-]{1,80}" maxLength={80} required onChange={e => setUsername(e.target.value)}/></label>
       <label>Rolle<select value={role} onChange={e => setRole(e.target.value as 'admin'|'viewer')}><option value="viewer">Viewer</option><option value="admin">Administrator</option></select></label>
-      <label>Passwort<input type="password" value={password} minLength={12} maxLength={256} required onChange={e => setPassword(e.target.value)}/></label>
+      <label>Passwort<div className="password-field"><input type={showPasswords ? 'text' : 'password'} value={password} minLength={12} maxLength={256} required onChange={e => setPassword(e.target.value)}/><button type="button" className="password-toggle" aria-label={showPasswords ? 'Passwörter verbergen' : 'Passwörter anzeigen'} onClick={() => setShowPasswords(value => !value)}>{showPasswords ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>
       <button className="primary" disabled={busy}>{busy ? 'Speichern …' : 'Benutzer hinzufügen'}</button>
     </form>
   </section>;
