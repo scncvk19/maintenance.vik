@@ -22,15 +22,20 @@ export default function TelegramSettings() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  async function load() {
-    const result = await api<TelegramSettingsState>('notifications/telegram/settings');
-    setSettings(result);
-    setEnabled(result.enabled);
-    setInterval(result.interval_seconds);
-  }
-
   useEffect(() => {
-    void load().catch(cause => setError((cause as Error).message));
+    let active = true;
+    void (async () => {
+      try {
+        const result = await api<TelegramSettingsState>('notifications/telegram/settings');
+        if (!active) return;
+        setSettings(result);
+        setEnabled(result.enabled);
+        setInterval(result.interval_seconds);
+      } catch (cause) {
+        if (active) setError((cause as Error).message);
+      }
+    })();
+    return () => { active = false; };
   }, []);
 
   async function save() {
