@@ -123,14 +123,13 @@ def test_tax_document_reminder_is_visible(client):
 
 def test_multiple_notification_recipients_can_be_managed(client):
     telegram = client.post("/records/notification-recipients", json={"channel": "telegram", "label": "Hausverwaltung", "address": "-100123456", "active": True, "notify_contracts": True, "notify_documents": False, "notify_work_items": True})
-    whatsapp = client.post("/records/notification-recipients", json={"channel": "whatsapp", "label": "Michael", "address": "+491701234567", "active": True})
     assert telegram.status_code == 201, telegram.text
-    assert whatsapp.status_code == 201, whatsapp.text
+    assert client.post("/records/notification-recipients", json={"channel": "sms", "label": "Nicht erlaubt", "address": "12345", "active": True}).status_code == 422
     recipients = client.get("/records/notification-recipients").json()
-    assert {row["channel"] for row in recipients} == {"telegram", "whatsapp"}
-    assert next(row for row in recipients if row["channel"] == "telegram")["notify_documents"] is False
-    assert len(client.get("/notification-recipients/contracts").json()) == 2
-    assert len(client.get("/notification-recipients/documents").json()) == 1
+    assert {row["channel"] for row in recipients} == {"telegram"}
+    assert recipients[0]["notify_documents"] is False
+    assert len(client.get("/notification-recipients/contracts").json()) == 1
+    assert len(client.get("/notification-recipients/documents").json()) == 0
     assert client.put(f'/records/notification-recipients/{telegram.json()["id"]}', json={"channel": "telegram", "label": "Hausverwaltung", "address": "-100123456", "active": False}).status_code == 200
 
 
