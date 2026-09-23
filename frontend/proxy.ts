@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { databaseAuthStatus, databaseSession, multiUserEnabled, sessionCookieName, verifySession } from './lib/auth';
 
 /** Access gate for browser and /api.
- * Preferred mode: APP_AUTH_USERS_B64 + APP_SESSION_SECRET (multi-user session login).
- * Legacy fallback: APP_AUTH_PASSWORD (single shared HTTP Basic password).
+ * Default mode: database-backed users and server-side sessions.
+ * Compatibility modes: APP_AUTH_USERS_B64 sessions or APP_AUTH_PASSWORD HTTP Basic.
  */
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
