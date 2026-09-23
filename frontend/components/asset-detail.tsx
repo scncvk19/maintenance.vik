@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { Building2, CalendarDays, CarFront, CircleDollarSign, Eye, FileText, Factory, LandPlot, Layers3, MapPin, Plus, UserRound, X } from 'lucide-react';
-import { billingCycles, categories, conditions, day, kinds, money, Row, transactionCategories, workKinds } from '../lib/data';
+import { billingCycles, categories, conditions, day, getSystemCondition, kinds, money, Row, transactionCategories, workKinds } from '../lib/data';
 
 type Props = {
   asset: Row;
@@ -24,11 +24,12 @@ export default function AssetDetail({ asset, components, workItems, documents, c
   const income = transactions.filter(item => item.asset_id === asset.id && item.direction === 'income').reduce((sum, item) => sum + Number(item.amount_cents), 0);
   const recurringMonthly = contracts.reduce((sum, item) => sum + Number(item.amount_cents) / (item.billing_cycle === 'yearly' ? 12 : 1), 0);
   const contact = [asset.contact_first_name, asset.contact_last_name].filter(Boolean).join(' ');
+  const system = getSystemCondition(asset.id, workItems);
   return <div className="overlay asset-detail-overlay" onClick={event => { if (event.target === event.currentTarget) close(); }}>
     <section className="asset-detail" role="dialog" aria-modal="true" aria-labelledby="asset-detail-title">
       <header className="asset-detail-head">
         <div className={`asset-detail-art ${asset.kind}`}>{asset.cover_document_id ? <Image src={`/api/assets/${asset.id}/image`} alt="" fill unoptimized sizes="560px"/> : <Icon size={54}/>}</div>
-        <div className="asset-detail-title"><span className="eyebrow">{kinds[String(asset.kind)]}</span><h2 id="asset-detail-title">{asset.name}</h2><p><MapPin size={14}/>{asset.location || 'Kein Standort hinterlegt'}</p><span className={`badge ${asset.condition}`}>{conditions[String(asset.condition)]}</span></div>
+        <div className="asset-detail-title"><span className="eyebrow">{kinds[String(asset.kind)]}</span><h2 id="asset-detail-title">{asset.name}</h2><p><MapPin size={14}/>{asset.location || 'Kein Standort hinterlegt'}</p><div className="asset-status-stack"><span className={`badge ${asset.condition}`}>Manuell: {conditions[String(asset.condition)]}</span><span className={`badge ${system.key}`} title={system.reason}>System: {conditions[system.key]} · {system.reason}</span></div></div>
         <button className="icon-button" aria-label="Asset-Details schließen" onClick={close}><X size={20}/></button>
       </header>
       <div className="asset-quick-actions">{asset.kind === 'vehicle' && <button className="secondary" onClick={edit}><FileText size={16}/>Foto ändern</button>}<button className="secondary" onClick={() => create('work-items', 'task')}><Plus size={16}/>Aufgabe</button><button className="secondary" onClick={() => create('work-items', 'maintenance')}><CalendarDays size={16}/>Wartung</button><button className="secondary" onClick={() => create('documents')}><FileText size={16}/>Dokument</button><button className="secondary" onClick={() => create('contracts')}><CircleDollarSign size={16}/>Verträge</button></div>
