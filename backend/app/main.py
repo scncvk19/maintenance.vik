@@ -22,6 +22,7 @@ from .auth import router as auth_router
 from .models import ActivityLog, Asset, Base, Component, Contract, Document, DocumentInput, Person, RESOURCES, TaxAttachment, TaxCase, TaxVault, Transaction, TrashItem, WorkItem
 
 
+APP_VERSION = "1.0.0-rc.1"
 TAX_SESSIONS: dict[str, tuple[bytes, datetime]] = {}
 TAX_IDLE_SECONDS = 900
 
@@ -111,7 +112,7 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title="maintenance.vik", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="maintenance.vik", version=APP_VERSION, lifespan=lifespan)
 app.include_router(auth_router)
 
 
@@ -196,7 +197,7 @@ def work_item_order(today: date | None = None):
 def health():
     with Session() as session:
         session.execute(text("SELECT 1"))
-    return {"status": "ok", "version": "0.1.0"}
+    return {"status": "ok", "version": APP_VERSION}
 
 
 @app.get("/tax-vault/status")
