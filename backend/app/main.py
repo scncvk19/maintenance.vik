@@ -63,6 +63,7 @@ async def lifespan(app):
     Base.metadata.create_all(engine)
     existing_columns = {column["name"] for column in inspect(engine).get_columns("assets")}
     document_columns = {column["name"] for column in inspect(engine).get_columns("documents")}
+    transaction_columns = {column["name"] for column in inspect(engine).get_columns("transactions")}
     recipient_columns = {column["name"] for column in inspect(engine).get_columns("notification_recipients")}
     vault_columns = {column["name"] for column in inspect(engine).get_columns("tax_vault")}
     with engine.begin() as connection:
@@ -96,6 +97,10 @@ async def lifespan(app):
             connection.execute(text("ALTER TABLE assets ADD COLUMN tax_notes TEXT DEFAULT ''"))
         if "property_id" not in existing_columns:
             connection.execute(text("ALTER TABLE assets ADD COLUMN property_id VARCHAR(36)"))
+        if "component_id" not in transaction_columns:
+            connection.execute(text("ALTER TABLE transactions ADD COLUMN component_id VARCHAR(36)"))
+        if connection.dialect.name == "postgresql":
+            connection.execute(text("ALTER TABLE transactions ALTER COLUMN asset_id DROP NOT NULL"))
         if "reminder_date" not in document_columns:
             connection.execute(text("ALTER TABLE documents ADD COLUMN reminder_date DATE"))
         if "reminder_days" not in document_columns:
@@ -152,7 +157,7 @@ def validate(schema, payload):
 
 
 def check_links(session, values):
-    if "asset_id" in values and not session.get(Asset, values["asset_id"]):
+    if values.get("asset_id") and not session.get(Asset, values["asset_id"]):
         raise HTTPException(422, "Das ausgewählte Asset existiert nicht.")
     if values.get("document_id"):
         document = session.get(Document, values["document_id"])
@@ -160,8 +165,8 @@ def check_links(session, values):
             raise HTTPException(422, "Das Dokument gehört nicht zu diesem Asset.")
     if values.get("component_id"):
         comp = session.get(Component, values["component_id"])
-        if not comp or comp.asset_id != values["asset_id"]:
-            raise HTTPException(422, "Die Komponente gehört nicht zu diesem Asset.")
+        if not comp or not values.get("asset_id") or comp.asset_id != values["asset_id"]:
+            raise HTTPException(422, "Bereich, Raum oder Komponente gehört nicht zu diesem Asset.")
     if values.get("person_id") and not session.get(Person, values["person_id"]):
         raise HTTPException(422, "Die ausgewählte Person existiert nicht.")
     if values.get("property_id"):
@@ -685,9 +690,10 @@ def save_record(name, payload, record_id=None):
         if name == "work-items" and was_done and values["status"] != "done":
             raise HTTPException(409, "Erledigte Historieneinträge können nicht wieder geöffnet werden. Bitte neue Aufgabe anlegen.")
         if name == "components" and record_id and row.asset_id != values["asset_id"]:
-            linked = session.scalar(select(func.count()).select_from(WorkItem).where(WorkItem.component_id == record_id))
-            if linked:
-                raise HTTPException(409, "Verknüpfte Komponenten können nicht zu einem anderen Asset verschoben werden.")
+            linked_work = session.scalar(select(func.count()).select_from(WorkItem).where(WorkItem.component_id == record_id))
+            linked_finance = session.scalar(select(func.count()).select_from(Transaction).where(Transaction.component_id == record_id))
+            if linked_work or linked_finance:
+                raise HTTPException(409, "Verknüpfte Räume, Etagen oder Komponenten können nicht zu einem anderen Asset verschoben werden.")
         for key, value in values.items():
             if key == "id":
                 continue
