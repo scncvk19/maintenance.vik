@@ -133,3 +133,9 @@
 .telegram-settings-row>label:not(.check-field){display:grid;gap:6px;font-size:11px}
 .telegram-settings .compact{margin:0;padding:9px 11px}
 @media(max-width:700px){.telegram-settings-row{grid-template-columns:1fr}}
+
+
+.asset-status-stack{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.visual-asset-title .asset-status-stack{justify-content:flex-end;max-width:220px}
+.asset-detail-title .asset-status-stack{margin-top:8px}
+@media(max-width:600px){.visual-asset-title .asset-status-stack{justify-content:flex-start;max-width:none}}
