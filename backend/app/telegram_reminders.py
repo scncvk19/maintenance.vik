@@ -1,13 +1,16 @@
 """Privacy-minimal Telegram reminders: off by default; no tax contents or titles leave the server."""
+import base64
 import hashlib
 import json
 import os
 import re
+import secrets
 import tempfile
 import urllib.request
 from datetime import date, timedelta
 from pathlib import Path
 
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import APIRouter, Header, HTTPException
 from sqlalchemy import select
 
@@ -16,8 +19,80 @@ from .models import Contract, Document, NotificationRecipient, WorkItem
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 SENT_FILE = DATA_DIR / "telegram-sent.json"
+SETTINGS_FILE = DATA_DIR / "telegram-settings.json"
 TOKEN_PATTERN = re.compile(r"^[0-9]{5,15}:[A-Za-z0-9_-]{30,}$")
 CHAT_PATTERN = re.compile(r"^-?[0-9]{5,20}$")
+
+
+
+def _settings_key() -> bytes:
+    database_url = os.getenv("DATABASE_URL", "")
+    if not database_url:
+        raise HTTPException(503, "Serverseitiger Schlüssel für Telegram-Konfiguration fehlt.")
+    return hashlib.sha256(("maintenance.vik.telegram.settings.v1:" + database_url).encode("utf-8")).digest()
+
+
+def _load_stored_settings() -> dict | None:
+    if not SETTINGS_FILE.exists():
+        return None
+    try:
+        payload = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+        nonce = base64.b64decode(payload["nonce"])
+        ciphertext = base64.b64decode(payload["ciphertext"])
+        raw = AESGCM(_settings_key()).decrypt(nonce, ciphertext, b"maintenance.vik.telegram.v1")
+        data = json.loads(raw.decode("utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError
+        return data
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(503, "Telegram-Konfiguration kann nicht gelesen werden.") from exc
+
+
+def _save_settings(data: dict) -> None:
+    nonce = secrets.token_bytes(12)
+    raw = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ciphertext = AESGCM(_settings_key()).encrypt(nonce, raw, b"maintenance.vik.telegram.v1")
+    payload = {"version": 1, "nonce": base64.b64encode(nonce).decode("ascii"), "ciphertext": base64.b64encode(ciphertext).decode("ascii")}
+    temp = SETTINGS_FILE.with_suffix(".tmp")
+    temp.write_text(json.dumps(payload), encoding="utf-8")
+    os.chmod(temp, 0o600)
+    os.replace(temp, SETTINGS_FILE)
+
+
+def effective_settings() -> dict:
+    stored = _load_stored_settings()
+    if stored is not None:
+        token = str(stored.get("token", ""))
+        return {
+            "token": token,
+            "enabled": bool(stored.get("enabled", False)),
+            "interval_seconds": max(300, int(stored.get("interval_seconds", 3600))),
+            "source": "ui",
+        }
+    try:
+        interval = max(300, int(os.getenv("TELEGRAM_CHECK_INTERVAL_SECONDS", "3600")))
+    except ValueError:
+        interval = 3600
+    return {
+        "token": os.getenv("TELEGRAM_BOT_TOKEN", ""),
+        "enabled": os.getenv("TELEGRAM_SEND_ENABLED") == "YES_I_CONFIGURED_THE_BOT",
+        "interval_seconds": interval,
+        "source": "env",
+    }
+
+
+def _telegram_get_me(token: str) -> dict:
+    request = urllib.request.Request(f"https://api.telegram.org/bot{token}/getMe", method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=12) as response:
+            result = json.loads(response.read(4096))
+        if result.get("ok") is not True:
+            raise ValueError
+        return result.get("result") or {}
+    except Exception as exc:
+        raise HTTPException(502, "Telegram-Verbindung fehlgeschlagen. Bot-Token prüfen.") from exc
 
 
 def due_counts(session, today: date) -> dict[str, int]:
@@ -94,9 +169,60 @@ def preview_reminders():
                          if row.channel == "telegram" and row.active)
     return {
         "counts": counts, "telegram_recipients": recipients,
-        "configured": bool(os.getenv("TELEGRAM_BOT_TOKEN")) and os.getenv("TELEGRAM_SEND_ENABLED") == "YES_I_CONFIGURED_THE_BOT",
+        "configured": (lambda settings: settings["enabled"] and bool(TOKEN_PATTERN.fullmatch(settings["token"])))(effective_settings()),
         "message": compose_message(counts),
         "note": "Nur Anzahlen; kein Versand ohne ausdrückliche Freigabe.",
+    }
+
+
+@router.get("/telegram/settings")
+def telegram_settings():
+    settings = effective_settings()
+    return {
+        "enabled": settings["enabled"],
+        "interval_seconds": settings["interval_seconds"],
+        "token_configured": bool(TOKEN_PATTERN.fullmatch(settings["token"])),
+        "token_masked": "••••••••••••" if settings["token"] else "",
+        "source": settings["source"],
+    }
+
+
+@router.put("/telegram/settings")
+def update_telegram_settings(payload: dict):
+    current = effective_settings()
+    token = str(payload.get("token") or current["token"]).strip()
+    enabled = bool(payload.get("enabled", False))
+    try:
+        interval = int(payload.get("interval_seconds", current["interval_seconds"]))
+    except (TypeError, ValueError):
+        raise HTTPException(422, "Ungültiges Prüfintervall.")
+    if interval < 300 or interval > 86400:
+        raise HTTPException(422, "Prüfintervall muss zwischen 5 Minuten und 24 Stunden liegen.")
+    if token and not TOKEN_PATTERN.fullmatch(token):
+        raise HTTPException(422, "Bot-Token hat kein gültiges Telegram-Format.")
+    if enabled and not token:
+        raise HTTPException(422, "Zum Aktivieren wird ein Bot-Token benötigt.")
+    _save_settings({"token": token, "enabled": enabled, "interval_seconds": interval})
+    return telegram_settings()
+
+
+@router.post("/telegram/test")
+def test_telegram_connection(payload: dict | None = None):
+    current = effective_settings()
+    candidate = str((payload or {}).get("token") or current["token"]).strip()
+    if not TOKEN_PATTERN.fullmatch(candidate):
+        raise HTTPException(422, "Bitte zuerst einen gültigen Bot-Token eingeben.")
+    bot = _telegram_get_me(candidate)
+    username = str(bot.get("username") or "")
+    return {"ok": True, "bot_username": username}
+
+
+@router.get("/telegram/worker-config")
+def telegram_worker_config():
+    settings = effective_settings()
+    return {
+        "enabled": settings["enabled"] and bool(TOKEN_PATTERN.fullmatch(settings["token"])),
+        "interval_seconds": settings["interval_seconds"],
     }
 
 
@@ -104,8 +230,9 @@ def preview_reminders():
 def send_reminders(x_confirm_send: str = Header(default="", alias="X-Confirm-Send")):
     if x_confirm_send != "SEND_TELEGRAM":
         raise HTTPException(403, "Versand muss ausdrücklich bestätigt werden.")
-    token = os.getenv("TELEGRAM_BOT_TOKEN", "")
-    if os.getenv("TELEGRAM_SEND_ENABLED") != "YES_I_CONFIGURED_THE_BOT" or not TOKEN_PATTERN.fullmatch(token):
+    settings = effective_settings()
+    token = settings["token"]
+    if not settings["enabled"] or not TOKEN_PATTERN.fullmatch(token):
         raise HTTPException(503, "Telegram ist nicht vollständig aktiviert.")
     with data_lock, Session() as session:
         counts = due_counts(session, date.today())

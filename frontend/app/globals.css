@@ -122,3 +122,14 @@
 .finance-filter-controls{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
 .finance-filter-controls label{min-width:240px}
 @media(max-width:700px){.finance-filter-controls{width:100%;display:grid}.finance-filter-controls label{min-width:0}}
+
+
+/* Telegram settings */
+.telegram-settings{display:grid;gap:12px;margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.telegram-settings-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.telegram-settings-head>span:first-child{display:flex;align-items:center;gap:8px}
+.telegram-settings>label{display:grid;gap:6px;font-size:11px}
+.telegram-settings-row{display:grid;grid-template-columns:1fr 220px;gap:12px;align-items:end}
+.telegram-settings-row>label:not(.check-field){display:grid;gap:6px;font-size:11px}
+.telegram-settings .compact{margin:0;padding:9px 11px}
+@media(max-width:700px){.telegram-settings-row{grid-template-columns:1fr}}
