@@ -14,7 +14,6 @@ def test_preview_does_not_send(client, monkeypatch, tmp_path):
     monkeypatch.delenv("TELEGRAM_SEND_ENABLED", raising=False)
     monkeypatch.setattr(reminders, "SENT_FILE", tmp_path / "sent.json")
     monkeypatch.setattr(reminders, "SETTINGS_FILE", tmp_path / "telegram-settings.json")
-    monkeypatch.setattr(reminders, "SETTINGS_KEY_FILE", tmp_path / ".telegram-settings.key")
     monkeypatch.setattr(reminders, "deliver", lambda *_: (_ for _ in ()).throw(AssertionError("Must not send")))
     with Session() as session:
         session.add(Asset(id="00000000-0000-4000-8000-000000000001", name="Geheimadresse", kind="building"))
@@ -58,7 +57,6 @@ def test_ui_settings_are_encrypted_and_can_override_environment(client, monkeypa
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "12345:" + "A" * 35)
     monkeypatch.setenv("TELEGRAM_SEND_ENABLED", "YES_I_CONFIGURED_THE_BOT")
     monkeypatch.setattr(reminders, "SETTINGS_FILE", tmp_path / "telegram-settings.json")
-    monkeypatch.setattr(reminders, "SETTINGS_KEY_FILE", tmp_path / ".telegram-settings.key")
 
     before = client.get("/notifications/telegram/settings")
     assert before.status_code == 200
@@ -87,7 +85,6 @@ def test_ui_settings_are_encrypted_and_can_override_environment(client, monkeypa
 def test_connection_test_never_returns_token(client, monkeypatch, tmp_path):
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
     monkeypatch.setattr(reminders, "SETTINGS_FILE", tmp_path / "telegram-settings.json")
-    monkeypatch.setattr(reminders, "SETTINGS_KEY_FILE", tmp_path / ".telegram-settings.key")
     token = "12345:" + "C" * 35
     monkeypatch.setattr(reminders, "_telegram_get_me", lambda value: {"username": "maintenance_test_bot"} if value == token else {})
     response = client.post("/notifications/telegram/test", json={"token": token})
