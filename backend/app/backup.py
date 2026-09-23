@@ -114,20 +114,28 @@ def validate_backup(content):
             if set(names) != allowed:
                 raise ValueError("Unerwartete Dateien im Backup")
             components = {r["id"]: r for r in parsed["components"]}
+            asset_linked = {"components", "work-items", "documents", "contracts", "residences"}
             for name, rows in parsed.items():
                 for row in rows:
                     if name in {"tax-cases", "tax-attachments"}:
                         continue
-                    if name != "assets" and name != "transactions" and row["asset_id"] not in ids["assets"]:
+                    if name in asset_linked and row.get("asset_id") not in ids["assets"]:
                         raise ValueError("Asset-Verknüpfung fehlt")
                     if name == "transactions" and row.get("asset_id") and row["asset_id"] not in ids["assets"]:
                         raise ValueError("Asset-Verknüpfung fehlt")
-                    if name == "assets" and row.get("cover_document_id") and row["cover_document_id"] not in ids["documents"]:
-                        raise ValueError("Titelbild-Verknüpfung fehlt")
+                    if name == "assets":
+                        if row.get("cover_document_id") and row["cover_document_id"] not in ids["documents"]:
+                            raise ValueError("Titelbild-Verknüpfung fehlt")
+                        if row.get("property_id") and row["property_id"] not in ids["assets"]:
+                            raise ValueError("Übergeordnete Asset-Verknüpfung fehlt")
                     if name in {"work-items", "transactions"} and row.get("component_id"):
                         comp = components.get(row["component_id"])
                         if not comp or comp["asset_id"] != row.get("asset_id"):
                             raise ValueError("Komponente gehört nicht zum Asset")
+                    if name == "contracts" and row.get("document_id") and row["document_id"] not in ids["documents"]:
+                        raise ValueError("Dokument-Verknüpfung fehlt")
+                    if name == "residences" and row.get("person_id") not in ids["people"]:
+                        raise ValueError("Person-Verknüpfung fehlt")
             if vault is not None:
                 if set(vault) != {column.name for column in TaxVault.__table__.columns} or vault.get("id") != 1:
                     raise ValueError("Ungültiger Schlüsselcontainer")
