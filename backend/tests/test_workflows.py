@@ -97,6 +97,9 @@ def test_finances_support_general_and_subarea_assignments(client):
         "booked_date": str(date.today()), "category": "other"
     })
     assert invalid.status_code == 422
+    assert client.put(f'/records/components/{floor.json()["id"]}', json={
+        "asset_id": other["id"], "name": "1. OG", "kind": "floor"
+    }).status_code == 409
 
 
 def test_contracts_store_recurring_terms_and_reminders(client):
