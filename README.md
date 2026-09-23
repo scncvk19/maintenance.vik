@@ -1,115 +1,125 @@
 # maintenance.vik
 
-Lokale Webanwendung für Immobilien, Fahrzeuge, technische Anlagen, Termine und geschützte Steuerfälle.
+Lokale Webanwendung zur Verwaltung von Immobilien, Grundstücken, Fahrzeugen, technischen Anlagen, Wartungen, Aufgaben, Finanzen, Dokumenten und geschützten Steuerfällen.
 
 ## Start unter Windows
 
 1. Docker Desktop starten.
 2. `Start.cmd` doppelklicken.
-3. Die Anwendung öffnet sich unter `http://localhost:3000`.
+3. Beim ersten Start im Browser das erste Administratorkonto anlegen.
+4. Danach läuft die Anwendung standardmäßig unter `http://localhost:3000`.
 
-Beim ersten Start erzeugt die Anwendung eine lokale `.env`-Datei mit einem zufälligen Datenbankpasswort. Diese Datei, die Datenbank und hochgeladene Dokumente bleiben lokal und werden nicht in Git übernommen.
+`Start.cmd` ruft `Start.ps1` mit einer passenden PowerShell-Ausführungsrichtlinie auf. Falls noch keine `.env` existiert, wird dort automatisch ein zufälliges PostgreSQL-Passwort erzeugt.
 
-## Lokale Benutzerkonten (empfohlen)
-
-maintenance.vik kann mehrere lokale Konten mit den Rollen **admin** und **viewer** verwenden. Passwörter werden als PBKDF2-SHA256-Hash mit zufälligem Salt in der lokalen `.env` gespeichert; Klartextpasswörter werden nicht gespeichert. Sitzungen laufen über signierte HttpOnly-Cookies und enden nach 12 Stunden.
-
-Benutzer anlegen oder aktualisieren:
+Alternativ:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "N:\maintenance.vik\scripts\Set-AppUser.ps1" -UserName sercan -Role admin
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "N:\maintenance.vik\scripts\Set-AppUser.ps1" -UserName leser -Role viewer
+cd "C:\Maintenance.vik\maintenance.vik"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\Start.ps1"
 ```
 
-Danach Container neu erstellen:
+## Benutzer und Rollen
 
-```powershell
-docker compose --project-directory "N:\maintenance.vik" up -d --build
-```
+Die normale Benutzerverwaltung erfolgt vollständig in der Weboberfläche.
 
-Anmeldung erfolgt anschließend unter `/login`. **admin** darf lesen und ändern. **viewer** darf normale Daten lesen, aber keine Änderungen, Backups oder Steuerbereiche aufrufen. Abmelden: `/logout`.
+- **Admin** darf Daten lesen und ändern, Benutzer verwalten, Backups verwenden und geschützte Bereiche öffnen.
+- **Viewer** darf normale Daten lesen, aber keine Änderungen, Backups oder Steuerbereiche ausführen.
+- Passwörter werden nicht im Klartext gespeichert.
+- Sitzungen sind zeitlich begrenzt und werden serverseitig verwaltet.
 
-Die Kontenfunktion hat Vorrang vor dem älteren `APP_AUTH_PASSWORD`. Wenn keine lokalen Konten konfiguriert sind, bleibt der bisherige optionale Basic-Auth-Modus kompatibel.
+Die älteren Umgebungsvariablen `APP_AUTH_USERS_B64` und `APP_AUTH_PASSWORD` bleiben nur für bestehende Installationen als Kompatibilitätsmodus erhalten. Für neue Installationen werden sie nicht benötigt.
 
-## Optionaler Zugriffsschutz (ein Benutzer)
+## Telegram
 
-Die Anwendung ist standardmäßig nur an `127.0.0.1` gebunden. Für einen zusätzlichen Passwortschutz `APP_AUTH_PASSWORD=` mit einem **eigenen, langen Passwort** in die lokale `.env` eintragen (ohne Anführungszeichen, keine Zeilenumbrüche) und die Container neu erstellen:
+Telegram wird unter **Einstellungen & Backup → Anbindungen → Telegram** eingerichtet.
 
-```powershell
-docker compose --project-directory 'N:\maintenance.vik' up -d --build
-```
+Dort können Bot-Token, Aktivierung und Prüfintervall verwaltet sowie die Verbindung getestet werden. Telegram-Empfänger und deren Erinnerungstypen werden direkt darunter gepflegt.
 
-Danach fragt der Browser nach Benutzername `admin` und dem gesetzten Passwort. Der Schutz gilt auch für die API und den Backup-Export. **Es handelt sich noch nicht um eine Mehrbenutzerverwaltung:** keine Rollen, kein Passwort-Reset und kein separates Logout. Bei Vergessen des Passworts lässt es sich in der lokalen `.env` ändern. Die `.env` niemals in Git übernehmen oder weitergeben.
+Der Bot-Token wird lokal verschlüsselt gespeichert und nach dem Speichern nicht wieder im Klartext ausgegeben. Die älteren `.env`-Variablen für Telegram bleiben als Fallback für bestehende Installationen unterstützt.
 
-Der integrierte Webserver ist für `localhost` vorgesehen. Für Zugriff von anderen Geräten nur einen abgesicherten VPN-Zugang oder einen **HTTPS**-Reverse-Proxy verwenden: HTTP Basic sendet die Zugangsdaten bei jeder Anfrage und ist über unverschlüsseltes HTTP im Netzwerk nicht sicher. Die Datenbank und den Backend-Port nicht separat veröffentlichen.
-
-Mit aktiviertem Passwortschutz benötigt das Backupskript Zugangsdaten. Diese interaktiv statt im Befehl als Klartext eingeben:
-
-```powershell
-$credential = Get-Credential -UserName admin
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'N:\maintenance.vik\scripts\Backup.ps1' -Credential $credential
-```
-
-Ohne `APP_AUTH_PASSWORD` bleibt das bisherige lokale Verhalten bestehen. Für einen späteren Mehrbenutzerbetrieb sind serverseitige Authentifizierung, Rollen und Session-Verwaltung weiterhin offen.
+Automatische Erinnerungen werden vom separaten `reminder-worker` geprüft. Telegram erhält nur Anzahlen fälliger Einträge, keine Titel, Adressen, Beträge oder Steuerinhalte. Doppelte Sendungen an denselben Empfänger werden pro Kalendertag unterdrückt.
 
 ## Lokale Dokumentanalyse / OCR
 
-PDFs, Bilder, TXT, CSV und DOCX können direkt in der Dokumentenübersicht mit **Lokal analysieren** ausgewertet werden. OCR läuft ausschließlich im Backend-Container mit Tesseract/Poppler; Dokumentinhalte werden nicht an Cloud-Dienste gesendet. Ein erkannter Kategorienvorschlag wird erst nach ausdrücklicher Bestätigung gespeichert.
+Bei der Auswahl eines neuen Dokuments startet die lokale Analyse bereits vor dem Speichern und kann Titel, Datum, Kategorie und Asset-Zuordnung vorschlagen. Alle Vorschläge bleiben korrigierbar.
 
-## Telegram-Erinnerungen
+Für gespeicherte Dokumente steht zusätzlich **Lokal analysieren** zur Verfügung. Unterstützt werden PDF, PNG/JPG/WEBP, TXT, CSV und DOCX. Die Analyse läuft lokal im Backend-Container mit Tesseract/Poppler; Dokumentinhalte werden nicht an externe OCR- oder KI-Dienste übertragen.
 
-Telegram ist der einzige externe Benachrichtigungskanal und standardmäßig **deaktiviert**. Für einen Test einen eigenen Bot bei Telegram erstellen und in der lokalen `.env` ergänzen:
+## Asset-Zustand
 
-```text
-TELEGRAM_BOT_TOKEN=<dein Bot-Token>
-TELEGRAM_SEND_ENABLED=YES_I_CONFIGURED_THE_BOT
-```
+maintenance.vik unterscheidet zwei Bewertungen:
 
-Danach die Container neu erstellen. In **Einstellungen & Backup → Telegram** zuerst die Vorschau laden. Der Versand überträgt nur Anzahlen fälliger Aufgaben/Wartungen, Verträge und Dokumenterinnerungen; keine Titel, Adressen, Beträge oder Steuerinhalte. Doppelte Sendungen an denselben Chat werden pro Kalendertag unterdrückt. Ein eigener Docker-Worker prüft standardmäßig stündlich auf fällige Erinnerungen; das Intervall kann mit `TELEGRAM_CHECK_INTERVAL_SECONDS` angepasst werden.
+- **Manuell**: die vom Benutzer gespeicherte Einschätzung `Gut`, `Beobachten` oder `Kritisch`.
+- **System**: automatisch aus offenen Wartungen, Mängeln und Prioritäten berechnet.
+
+Der Systemstatus wird kritisch bei überfälliger Wartung oder einem offenen kritischen/dringenden Mangel. Beobachten gilt unter anderem bei offenen Mängeln, hoher Priorität oder einer Wartung innerhalb der nächsten 30 Tage. Der manuelle Zustand wird dadurch nicht überschrieben.
+
+## Backup
+
+Unter **Einstellungen & Backup** kann der aktuelle Datenbestand inklusive Dokumenten als ZIP exportiert und wiederhergestellt werden. Vor einem Restore wird die Sicherung auf Version, Beziehungen und Prüfsummen geprüft.
+
+Für sehr große Offline-Sicherungen existieren zusätzlich die Skripte unter `scripts/Backup-Large.ps1` und `scripts/Restore-Large.ps1`.
 
 ## Installation mit fertigen Docker-Images
 
-Für eine Installation ohne lokalen Node.js-/Python-Build steht `docker-compose.release.yml` bereit. Nach einem erfolgreichen Image-Release werden Frontend und Backend aus GHCR geladen.
-
-1. `.env.example` nach `.env` kopieren und mindestens `POSTGRES_PASSWORD` setzen.
-2. Falls die GHCR-Pakete privat sind, einmal mit GitHub Container Registry anmelden.
-3. Starten:
+Für Installationen ohne lokalen Node.js-/Python-Build:
 
 ```powershell
 docker compose -f docker-compose.release.yml pull
 docker compose -f docker-compose.release.yml up -d
 ```
 
-Die Datenbank und Dokumente liegen in persistenten Docker-Volumes. Ein Update erfolgt durch erneutes `pull` und `up -d`. Für reproduzierbare Installationen kann `MAINTENANCE_VIK_VERSION` auf einen Release-Tag wie `v1.0.0` gesetzt werden.
+Benötigt wird mindestens eine lokale `.env` mit:
 
-## Funktionsbereiche
+```text
+POSTGRES_PASSWORD=<eigenes starkes Passwort>
+APP_PORT=3000
+```
 
-- Immobilien, Grundstücke, Fahrzeuge und technische Anlagen
-- Aufgaben, Mängel, Wartungen und Erinnerungen
-- Verträge, Kosten und Dokumente
-- Übersichtliche Detailansichten mit Fotos und Verknüpfungen
-- Steuerfälle mit verschlüsselten Steuerdaten und Uploads
-- Wiederherstellungsschlüssel, automatische Sperre nach 15 Minuten und sichere Neuanlage eines Steuerbereichs
-- Export und Import vollständiger Backups
+Frontend und Backend werden aus GHCR geladen. Datenbank und Dokumente liegen in persistenten Docker-Volumes. Mit `MAINTENANCE_VIK_VERSION` kann später gezielt ein Release-Tag wie `v1.0.0` verwendet werden.
+
+## Dienste
+
+Die normale Installation besteht aus vier Diensten:
+
+- `database` – PostgreSQL 17
+- `backend` – FastAPI
+- `frontend` – Next.js
+- `reminder-worker` – automatische Telegram-Prüfung
+
+Backend und Datenbank werden nicht direkt nach außen veröffentlicht. Das Frontend ist standardmäßig nur an `127.0.0.1` gebunden.
 
 ## Entwicklung und Prüfung
 
-Frontend prüfen:
+Frontend:
 
 ```powershell
 cd frontend
+npm ci
 npm run lint
 npm run typecheck
 npm run build
 ```
 
-Backend prüfen:
+Backend:
 
 ```powershell
-docker build -t maintenance-vik-backend backend
-docker run --rm -v "${PWD}\backend:/work" -w /work maintenance-vik-backend pytest -q -p no:cacheprovider
+cd backend
+python -m pip install -r requirements.lock.txt
+python -m pytest -q -p no:cacheprovider
 ```
 
-## Sicherung
+Docker/Compose:
 
-Unter **Einstellungen & Backup** lässt sich ein Backup exportieren und später wiederherstellen. Ein Backup enthält die Anwendungsdaten, hochgeladene Dokumente und die verschlüsselte Struktur der Steuerfälle. Es enthält weder das Steuerpasswort noch den Wiederherstellungsschlüssel im Klartext.
+```powershell
+docker compose config
+docker compose build
+docker compose up -d --wait
+docker compose ps
+```
+
+Die GitHub-CI prüft zusätzlich PostgreSQL-Backup/Restore, Authentifizierung, Docker-Images, OCR/Preview und die Release-Compose-Konfiguration.
+
+## Netzwerkzugriff
+
+Für Zugriff von anderen Geräten einen abgesicherten VPN-Zugang oder einen HTTPS-Reverse-Proxy verwenden. Datenbank- und Backend-Port nicht separat veröffentlichen.
