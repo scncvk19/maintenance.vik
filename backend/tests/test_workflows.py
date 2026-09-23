@@ -129,8 +129,13 @@ def test_backup_roundtrip_with_deduplicated_documents_and_corrections(client):
     a = asset(client)
     d = upload(client, a["id"])
     upload(client, a["id"])
+    recipient = client.post("/records/notification-recipients", json={
+        "channel": "telegram", "label": "Backup Test", "address": "123456789",
+        "active": True, "notify_contracts": True, "notify_documents": True, "notify_work_items": True
+    })
+    assert recipient.status_code == 201, recipient.text
     assert client.put(f'/records/documents/{d["id"]}', json={"asset_id": a["id"], "title": "Energie", "document_date": "2026-08-20", "category": "energy"}).status_code == 200
-    before = {name: client.get(f"/records/{name}").json() for name in ("assets", "components", "work-items", "transactions", "documents")}
+    before = {name: client.get(f"/records/{name}").json() for name in ("assets", "components", "work-items", "transactions", "documents", "notification-recipients")}
     backup = client.get("/backup/export")
     assert backup.status_code == 200
     preview = client.post("/backup/preview", files={"file": ("backup.zip", backup.content)})
