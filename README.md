@@ -1,10 +1,10 @@
 # maintenance.vik
 
 **Version:** `1.0.0-rc.1`  
-**Status:** Release Candidate – final operational and clean-install tests are still pending.
+**Status:** Release Candidate – functional acceptance tests completed successfully.
 
-> Assets, maintenance, finances & documents in one place.  
-> Assets, Wartung, Finanzen & Dokumente zentral verwalten.
+> Assets, maintenance, finances and documents in one locally hosted application.  
+> Bestände, Wartung, Finanzen und Dokumente in einer lokal betriebenen Anwendung.
 
 [Deutsch](#deutsch) · [English](#english)
 
@@ -14,74 +14,57 @@
 
 ## Überblick
 
-**maintenance.vik** ist eine lokal betriebene Webanwendung zur Verwaltung von Beständen und zugehörigen Informationen.
+**maintenance.vik** ist eine lokal betriebene Webanwendung zur Verwaltung von Beständen und den dazugehörigen Wartungen, Finanzen, Verträgen und Dokumenten.
+
+Die Anwendung richtet sich an private und lokale Einsatzszenarien und läuft vollständig über Docker. Für den normalen Betrieb werden weder eine Cloud-Datenbank noch externe KI-Dienste benötigt.
 
 Unterstützt werden unter anderem:
 
-- Gebäude und Immobilien
-- Grundstücke
-- Fahrzeuge
-- Maschinen und technische Anlagen
+- Gebäude, Immobilien und Grundstücke
+- Fahrzeuge, Maschinen und technische Anlagen
 - Etagen, Räume, Bereiche und Komponenten
-- Wartungen, Aufgaben und Mängel
-- Kalender und Fälligkeiten
+- Wartungen, Aufgaben, Mängel und Fälligkeiten
+- Kalender und Erinnerungen
 - Einnahmen, Ausgaben und Verträge
 - Dokumente und lokale OCR
-- geschützte Steuerfälle
-- Erinnerungen über Telegram
-- Benutzer und Rollen
-- Papierkorb, Aktivitätsverlauf und globale Suche
-- Backup und Wiederherstellung
-
-Die Anwendung ist für den lokalen Betrieb mit Docker ausgelegt und benötigt für den normalen Einsatz weder eine Cloud-Datenbank noch externe KI-Dienste.
+- geschützter Steuer-Tresor
+- Telegram-Erinnerungen
+- lokale Benutzerverwaltung mit Admin-/Viewer-Rollen
+- globale Suche
+- Papierkorb und Wiederherstellung
+- Aktivitätsverlauf
+- Backup und Restore
 
 ## Aktueller Stand
 
-Der funktionale Kern wurde manuell geprüft:
+Der Release Candidate wurde in einer getrennten Docker-Testumgebung funktional geprüft.
 
-- Ersteinrichtung und Anmeldung
-- Admin-/Viewer-Rollen
-- Benutzerverwaltung
-- Gebäude, Grundstücke, Fahrzeuge und technische Anlagen
-- Etagen, Räume, Bereiche und Komponenten
-- Wartungen, Aufgaben und Mängel
-- Kalender
-- Finanzen und Verträge
-- Dokumente und lokale OCR
+Erfolgreich getestet wurden unter anderem:
+
+- Docker-Build und Anwendungsstart
+- PostgreSQL-, Backend- und Frontend-Healthchecks
+- saubere Ersteinrichtung mit leerer Datenbank
+- Admin-Anmeldung und Benutzerverwaltung
+- Viewer-Rolle mit eingeschränkten Rechten
+- Objekte und Fahrzeuge
+- Räume, Komponenten und Zuordnungen
+- Wartungen, Intervalle und Folgeaufgaben
+- Finanzen und Salden
+- Dokument-Upload und Download
+- lokale OCR und korrigierbare Vorschläge
+- Verträge und Erinnerungen
+- Steuer-Tresor und Wiederherstellungsfunktionen
 - globale Suche
-- Telegram inklusive Empfänger und echtem Testversand
-- Papierkorb
+- Papierkorb und Wiederherstellung
 - Aktivitätsverlauf
-- Dark Mode
 - Backup-Export und Restore
-- automatischer Asset-Systemstatus
+- SHA-256-Prüfung von Backups
+- getrennte Test-Volumes und Test-Datenbank
+- Telegram-Funktionen und Reminder-Worker
 
-Zusätzlich laufen in der GitHub-CI unter anderem:
+Während der Abschlussprüfung wurden zusätzlich der Backup-Login für die aktuelle lokale Benutzerverwaltung sowie der Schutz vor versehentlich wiederverwendeten Test-Volumes verbessert.
 
-- Python/Ruff-Prüfung
-- Backend-Tests mit isolierter SQLite-Datenbank
-- PostgreSQL Backup-/Restore-Integrationstest
-- Frontend-Lint
-- TypeScript-Prüfung
-- Produktions-Build
-- Authentifizierungsprüfungen
-- Docker-Builds
-- Development- und Release-Compose-Prüfung
-- lokale Dokument-/OCR-Tests
-
-### Noch offen vor `v1.0.0`
-
-Der finale Release-Tag wird **erst nach Abschluss dieser Prüfungen** erstellt:
-
-- vollständiger Docker-Neustart mit Persistenzprüfung
-- vollständiger PC-/Docker-Desktop-Neustart mit Persistenzprüfung
-- abschließende Responsive-Prüfung auf Desktop, Tablet und Mobil
-- gezielte Fehlerfälle und ungültige Eingaben
-- finaler Containerstatus
-- finale Log-Prüfung
-- Installation über `docker-compose.release.yml` und GHCR-Images
-- vollständige frische Installation mit leeren Volumes
-- letzter kritischer Funktionstest nach allen Änderungen
+Der Stand ist für die Veröffentlichung des Quellcodes vorbereitet. `v1.0.0` ist noch nicht als finaler Release-Tag veröffentlicht.
 
 ## Architektur
 
@@ -92,61 +75,67 @@ Der finale Release-Tag wird **erst nach Abschluss dieser Prüfungen** erstellt:
 | Datenbank | PostgreSQL 17 |
 | Container | Docker / Docker Compose |
 | OCR | Tesseract + Poppler |
-| Benachrichtigung | Telegram |
+| Benachrichtigungen | Telegram |
 | Persistenz | PostgreSQL- und Dokument-Volumes |
 
-Die normale Installation besteht aus vier Diensten:
+Die Standardinstallation besteht aus vier Diensten:
 
 - `database` – PostgreSQL 17
 - `backend` – FastAPI
 - `frontend` – Next.js
-- `reminder-worker` – automatische Telegram-Prüfung
+- `reminder-worker` – automatische Prüfung von Erinnerungen
 
-Backend und Datenbank werden standardmäßig nicht direkt am Host veröffentlicht.
+Backend und Datenbank werden standardmäßig nicht direkt am Host veröffentlicht. Das Frontend wird lokal an `127.0.0.1` gebunden.
 
 ## Schnellstart unter Windows
 
 ### Empfohlen
 
-1. Docker Desktop starten.
-2. Repository öffnen.
+1. Docker Desktop installieren und starten.
+2. Repository klonen oder aktualisieren.
 3. `Start.cmd` doppelklicken.
-4. Beim ersten Start im Browser das erste Administratorkonto anlegen.
-5. Anwendung unter `http://localhost:3000` öffnen.
+4. Beim ersten Start das erste Administratorkonto im Browser anlegen.
+5. maintenance.vik unter `http://localhost:3000` öffnen.
 
-`Start.cmd` startet `Start.ps1` mit einer geeigneten PowerShell-Ausführungsrichtlinie.
+`Start.cmd` startet `Start.ps1` mit einer passenden PowerShell-Ausführungsrichtlinie.
 
-Falls noch keine `.env` vorhanden ist, erzeugt das Startskript automatisch ein zufälliges PostgreSQL-Passwort.
+Falls noch keine lokale `.env` existiert, erzeugt das Startskript automatisch ein zufälliges PostgreSQL-Passwort.
 
-### Manuell
+### Start über PowerShell
 
 ```powershell
 cd "C:\Maintenance.vik\maintenance.vik"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\Start.ps1"
 ```
 
-Oder:
+Ein direkter Start mit Docker Compose ist ebenfalls möglich, setzt aber eine gültige lokale `.env` voraus:
 
 ```powershell
 docker compose up -d --build --wait
 ```
 
+Status prüfen:
+
+```powershell
+docker compose ps
+```
+
 ## Benutzer und Rollen
 
-Die normale Benutzerverwaltung erfolgt direkt in der Weboberfläche.
+Die Benutzerverwaltung erfolgt lokal in maintenance.vik.
 
 ### Admin
 
-Darf unter anderem:
+Administratoren dürfen unter anderem:
 
-- Daten lesen und ändern
+- Daten lesen, anlegen, bearbeiten und löschen
 - Benutzer verwalten
 - Backups erstellen und wiederherstellen
-- geschützte Bereiche verwenden
+- geschützte Verwaltungsbereiche verwenden
 
 ### Viewer
 
-Darf normale Daten lesen, aber keine schreibenden Aktionen, Backups oder geschützten Verwaltungsbereiche ausführen.
+Viewer dürfen normale Anwendungsdaten lesen, aber keine schreibenden Aktionen durchführen. Backup-, Steuer- und Benutzerverwaltungsfunktionen sind für Viewer gesperrt.
 
 Passwörter werden nicht im Klartext gespeichert. Sitzungen sind zeitlich begrenzt und werden serverseitig verwaltet.
 
@@ -154,7 +143,7 @@ Die älteren Variablen `APP_AUTH_USERS_B64` und `APP_AUTH_PASSWORD` bleiben nur 
 
 ## Asset-Zustand und Systemstatus
 
-maintenance.vik unterscheidet bewusst zwischen zwei Bewertungen.
+maintenance.vik unterscheidet zwischen einer manuellen Einschätzung und einem automatisch berechneten Systemstatus.
 
 ### Manueller Zustand
 
@@ -166,44 +155,35 @@ Vom Benutzer festgelegt:
 
 ### Automatischer Systemstatus
 
-Wird aus Wartungen, Aufgaben und Mängeln berechnet.
+Der Systemstatus berücksichtigt unter anderem:
 
-**Kritisch** bei:
+- überfällige Wartungen
+- offene Mängel
+- dringende oder kritische Einträge
+- Aufgaben mit hoher Priorität
+- in Kürze fällige Wartungen
 
-- überfälliger Wartung
-- offenem kritischem oder dringendem Mangel
-
-**Beobachten** unter anderem bei:
-
-- offenem Mangel
-- Aufgabe mit hoher Priorität
-- Wartung innerhalb der nächsten 30 Tage
-
-**Gut**, wenn aktuell kein entsprechender Handlungsbedarf erkannt wird.
-
-Der automatische Status überschreibt die manuelle Einschätzung nicht.
+Der automatisch berechnete Status überschreibt die manuelle Einschätzung nicht.
 
 ## Finanzen
 
-Der Finanzbereich unterstützt:
+Der Finanzbereich unterstützt unter anderem:
 
-- Einnahmen
-- Ausgaben
+- Einnahmen und Ausgaben
 - wiederkehrende Verträge
 - monatliche und jährliche Kosten
-- allgemeine private Kategorien
-- Zuordnung zu Assets
-- Zuordnung zu Etagen, Räumen, Bereichen oder Komponenten
+- Kategorien
+- Zuordnung zu Assets und Komponenten
 - Filter nach Objekt und Unterbereich
 - Monatsübersicht und Saldo
 
-Der Finanzbereich dient der persönlichen Übersicht und ersetzt keine vollständige Buchhaltungssoftware.
+Der Finanzbereich dient der persönlichen Übersicht und ersetzt keine vollständige Buchhaltungssoftware oder Steuerberatung.
 
 ## Dokumente und lokale OCR
 
-Dokumente können hochgeladen, einem Asset zugeordnet und lokal analysiert werden.
+Dokumente können hochgeladen, Assets zugeordnet, angezeigt und wieder heruntergeladen werden.
 
-Unterstützte Formate:
+Unterstützte Formate umfassen:
 
 - PDF
 - PNG
@@ -212,27 +192,17 @@ Unterstützte Formate:
 - TXT
 - CSV
 - DOCX
+- XLSX
 
-Beim Auswählen eines Dokuments kann die lokale Analyse Vorschläge erzeugen für:
+Die lokale Dokumentanalyse kann Vorschläge für Metadaten und Kategorien erzeugen. Vorschläge werden nicht ungefragt übernommen und bleiben vor dem Speichern korrigierbar.
 
-- Titel
-- Dokumentdatum
-- Kategorie
-- Asset-Zuordnung
-
-Alle Vorschläge bleiben korrigierbar.
-
-Die Analyse läuft lokal im Backend mit **Tesseract** und **Poppler**. Dokumentinhalte werden nicht an externe OCR- oder KI-Dienste übertragen.
+OCR und PDF-Texterkennung laufen lokal mit **Tesseract** und **Poppler**. Dokumentinhalte werden dafür nicht an externe KI- oder OCR-Dienste übertragen.
 
 ## Telegram-Erinnerungen
 
-Telegram wird unter:
+Telegram wird unter **Einstellungen & Backup → Anbindungen → Telegram** eingerichtet.
 
-**Einstellungen & Backup → Anbindungen → Telegram**
-
-konfiguriert.
-
-Über die UI lassen sich verwalten:
+Konfigurierbar sind unter anderem:
 
 - Bot-Token
 - Aktivierung
@@ -241,51 +211,72 @@ konfiguriert.
 - Empfänger / Chat-IDs
 - Erinnerungstypen pro Empfänger
 
-Der Bot-Token wird lokal verschlüsselt gespeichert und nach dem Speichern nicht wieder im Klartext angezeigt.
+Der Bot-Token wird lokal geschützt gespeichert und nach dem Speichern nicht wieder im Klartext angezeigt.
 
-Der `reminder-worker` prüft automatisch nach dem gewählten Intervall.
-
-Telegram erhält bewusst nur Anzahlen fälliger Einträge, beispielsweise:
-
-- Aufgaben/Wartungen
-- Vertragsenden
-- Dokument-Erinnerungen
-
-Nicht versendet werden unter anderem:
-
-- Objektnamen
-- Adressen
-- Beträge
-- Steuerinhalte
-- Dokumentinhalte
-
-Doppelte Erinnerungen an denselben Empfänger werden pro Kalendertag unterdrückt.
+Der `reminder-worker` prüft Erinnerungen automatisch. Telegram erhält bewusst nur die für die Erinnerung notwendigen Informationen; sensible Dokument-, Steuer- oder Finanzinhalte sollen nicht versendet werden.
 
 ## Backup und Restore
 
-Unter **Einstellungen & Backup** kann ein ZIP-Backup erstellt werden.
+maintenance.vik unterstützt ein ZIP-basiertes Anwendungsbackup mit Prüfsummen.
 
-Das Backup enthält den Anwendungsdatenbestand und die zugehörigen Dokumente/Bilder.
+Ein Backup kann über die Weboberfläche oder unter Windows mit dem vorhandenen Skript erstellt werden:
 
-Vor einer Wiederherstellung werden unter anderem geprüft:
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\scripts\Backup.ps1' -Credential (Get-Credential -UserName 'admin')"
+```
 
-- Backup-Version
-- Datensatz-Verknüpfungen
-- Dokumentreferenzen
-- Prüfsummen
+Bei Installationen mit einem anders benannten Administratorkonto kann im Anmeldedialog der entsprechende Benutzername verwendet werden.
 
-Ein Restore ersetzt den aktuellen Datenbestand der gewählten Installation.
+Das Skript:
 
-Vor jedem produktiven Restore sollte ein zusätzliches aktuelles Backup vorhanden sein.
+- exportiert den Anwendungsbestand
+- prüft das Backup-Manifest
+- kontrolliert enthaltene Dokumente
+- erstellt eine SHA-256-Prüfsumme
+- verändert oder importiert keine Daten
 
-Für größere Offline-Sicherungen existieren außerdem:
+Vor einem produktiven Restore sollte immer eine zusätzliche, unabhängig gespeicherte Sicherung vorhanden sein.
+
+Für größere Offline-Sicherungen stehen zusätzlich zur Verfügung:
 
 - `scripts/Backup-Large.ps1`
+- `scripts/Verify-LargeBackup.ps1`
 - `scripts/Restore-Large.ps1`
+
+## Sichere Testumgebung
+
+Destruktive Restore- oder Browser-Tests dürfen nicht gegen die normale Installation ausgeführt werden.
+
+Für einen getrennten Test-Checkout:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\Prepare-TestEnvironment.ps1"
+```
+
+Das Skript prüft unter anderem:
+
+- aktuellen `main`-Branch
+- unveränderten Git-Arbeitsstand
+- vorhandenes und geprüftes Backup
+- alte Docker-Testcontainer und Test-Volumes
+- getrennten Zielordner
+
+Die Testinstanz wird anschließend bewusst mit einem eigenen Compose-Projektnamen gestartet:
+
+```powershell
+cd "C:\Maintenance.vik\maintenance.vik-test"
+docker compose -p maintenance-vik-test up -d --build --wait
+```
+
+Standardmäßig läuft sie auf:
+
+```text
+http://localhost:3100
+```
 
 ## Installation mit fertigen Docker-Images
 
-Für eine spätere v1.0-Installation ohne lokalen Node.js-/Python-Build ist `docker-compose.release.yml` vorgesehen.
+Für Installationen ohne lokalen Node.js-/Python-Build ist `docker-compose.release.yml` vorgesehen.
 
 ```powershell
 docker compose -f docker-compose.release.yml pull
@@ -299,15 +290,13 @@ POSTGRES_PASSWORD=<starkes eigenes Passwort>
 APP_PORT=3000
 ```
 
-Mit `MAINTENANCE_VIK_VERSION` kann gezielt ein Release-Tag verwendet werden.
+Mit `MAINTENANCE_VIK_VERSION` kann später gezielt ein Release-Tag ausgewählt werden.
 
-Beispiel nach Freigabe von v1.0:
+Beispiel nach Veröffentlichung von v1.0.0:
 
 ```text
 MAINTENANCE_VIK_VERSION=v1.0.0
 ```
-
-**Hinweis:** `v1.0.0` ist aktuell noch nicht freigegeben.
 
 ## Entwicklung und Tests
 
@@ -344,15 +333,23 @@ docker compose logs --tail=100
 
 Das Frontend ist standardmäßig nur an `127.0.0.1` gebunden.
 
-Für Zugriff von anderen Geräten sollte ein abgesicherter Weg verwendet werden, zum Beispiel:
+Für den Zugriff von anderen Geräten sollte ein abgesicherter Weg verwendet werden, zum Beispiel:
 
 - VPN
-- Tailscale / vergleichbare private Netzwerkverbindung
+- Tailscale oder eine vergleichbare private Netzwerkverbindung
 - HTTPS-Reverse-Proxy
 
 Datenbank- und Backend-Port sollten nicht direkt ins Internet veröffentlicht werden.
 
-Geheimnisse wie PostgreSQL-Passwort und Telegram-Bot-Token gehören nicht in Git, Screenshots oder öffentliche Supportanfragen.
+Geheimnisse wie PostgreSQL-Passwort oder Telegram-Bot-Token gehören nicht in Git, Screenshots oder öffentliche Supportanfragen.
+
+## Lizenz
+
+maintenance.vik wird unter der **MIT-Lizenz** veröffentlicht.
+
+Damit darf der Code unter den Bedingungen der Lizenz verwendet, verändert und weitergegeben werden. Der Copyright- und Lizenzhinweis muss erhalten bleiben.
+
+Siehe [LICENSE](LICENSE).
 
 ---
 
@@ -360,74 +357,57 @@ Geheimnisse wie PostgreSQL-Passwort und Telegram-Bot-Token gehören nicht in Git
 
 ## Overview
 
-**maintenance.vik** is a locally hosted web application for managing assets and related operational data.
+**maintenance.vik** is a locally hosted web application for managing assets together with maintenance, finances, contracts and documents.
 
-It supports:
+It is designed for private and local deployments and runs through Docker. Normal operation does not require a cloud database or an external AI service.
 
-- buildings and real estate
-- land and properties
-- vehicles
-- machines and technical equipment
+Features include:
+
+- buildings, real estate and land
+- vehicles, machines and technical equipment
 - floors, rooms, areas and components
-- maintenance, tasks and defects
-- calendar and due dates
+- maintenance, tasks, defects and due dates
+- calendar and reminders
 - income, expenses and contracts
 - documents and local OCR
-- protected tax cases
+- protected tax vault
 - Telegram reminders
-- users and roles
-- recycle bin, activity history and global search
+- local user management with admin/viewer roles
+- global search
+- recycle bin and restore
+- activity history
 - backup and restore
-
-The application is designed for local Docker deployments and does not require a cloud database or external AI service for its normal operation.
 
 ## Current status
 
-The core application has been manually verified for:
+The release candidate has completed a functional acceptance pass in an isolated Docker test environment.
 
-- first-run setup and login
-- admin/viewer roles
-- user management
-- buildings, properties, vehicles and technical equipment
-- floors, rooms, areas and components
-- maintenance, tasks and defects
-- calendar
-- finances and contracts
-- documents and local OCR
+Successfully verified areas include:
+
+- Docker build and application startup
+- PostgreSQL, backend and frontend health checks
+- clean first-run setup with an empty database
+- admin login and user management
+- restricted viewer permissions
+- assets and vehicles
+- rooms, components and relationships
+- maintenance intervals and follow-up tasks
+- finances and balances
+- document upload and download
+- local OCR with editable suggestions
+- contracts and reminders
+- tax vault and recovery functionality
 - global search
-- Telegram including recipients and a real delivery test
-- recycle bin
+- recycle bin and restore
 - activity history
-- dark mode
 - backup export and restore
-- automatic asset system health
+- SHA-256 backup verification
+- isolated test database and Docker volumes
+- Telegram features and reminder worker
 
-GitHub CI additionally checks:
+During the final acceptance pass, backup authentication for the current local user system and safeguards against accidentally reusing stale Docker test volumes were also improved.
 
-- Python/Ruff
-- backend tests using isolated SQLite
-- PostgreSQL backup/restore integration
-- frontend lint
-- TypeScript
-- production builds
-- authentication
-- Docker image builds
-- development and release Compose files
-- local document/OCR workflows
-
-### Remaining before `v1.0.0`
-
-The final release tag will only be created after:
-
-- full Docker restart and persistence verification
-- full PC/Docker Desktop restart and persistence verification
-- final responsive checks on desktop, tablet and mobile
-- targeted invalid-input and error-case testing
-- final container status review
-- final log review
-- installation through `docker-compose.release.yml` and GHCR images
-- complete clean installation using empty volumes
-- one final critical regression pass after all changes
+The source tree is prepared for public release. A final `v1.0.0` release tag has not been published yet.
 
 ## Architecture
 
@@ -446,53 +426,59 @@ A normal installation contains four services:
 - `database` – PostgreSQL 17
 - `backend` – FastAPI
 - `frontend` – Next.js
-- `reminder-worker` – automatic Telegram checks
+- `reminder-worker` – automatic reminder checks
 
-The backend and database are not published directly to the host by default.
+The backend and database are not exposed directly to the host by default. The frontend is bound locally to `127.0.0.1`.
 
 ## Quick start on Windows
 
 ### Recommended
 
-1. Start Docker Desktop.
-2. Open the repository.
+1. Install and start Docker Desktop.
+2. Clone or update the repository.
 3. Double-click `Start.cmd`.
 4. Create the first administrator account in the browser.
-5. Open `http://localhost:3000`.
+5. Open maintenance.vik at `http://localhost:3000`.
 
-`Start.cmd` launches `Start.ps1` with an appropriate PowerShell execution policy.
+`Start.cmd` launches `Start.ps1` using an appropriate PowerShell execution policy.
 
-If no `.env` exists, the start script automatically generates a random PostgreSQL password.
+If no local `.env` exists, the start script automatically generates a random PostgreSQL password.
 
-### Manual start
+### Start from PowerShell
 
 ```powershell
 cd "C:\Maintenance.vik\maintenance.vik"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\Start.ps1"
 ```
 
-Or:
+A direct Docker Compose start is also possible when a valid local `.env` already exists:
 
 ```powershell
 docker compose up -d --build --wait
 ```
 
+Check status with:
+
+```powershell
+docker compose ps
+```
+
 ## Users and roles
 
-Normal user administration is handled directly in the web interface.
+User administration is handled locally inside maintenance.vik.
 
 ### Admin
 
-Can:
+Administrators can:
 
-- read and modify data
+- read, create, edit and delete data
 - manage users
 - export and restore backups
 - access protected administration areas
 
 ### Viewer
 
-Can read normal application data but cannot perform write operations, backups or protected administrative actions.
+Viewers can read normal application data but cannot perform write operations. Backup, tax and user-management actions are blocked for viewers.
 
 Passwords are not stored in plaintext. Sessions are time-limited and managed server-side.
 
@@ -500,7 +486,7 @@ The older `APP_AUTH_USERS_B64` and `APP_AUTH_PASSWORD` variables remain only as 
 
 ## Asset condition and system health
 
-maintenance.vik intentionally separates two states.
+maintenance.vik separates the user's manual condition from an automatically calculated system health status.
 
 ### Manual condition
 
@@ -512,42 +498,33 @@ Selected by the user:
 
 ### Automatic system health
 
-Calculated from maintenance, tasks and defects.
+The system health considers items such as:
 
-**Critical** when:
+- overdue maintenance
+- open defects
+- urgent or critical entries
+- high-priority tasks
+- maintenance due soon
 
-- maintenance is overdue
-- a critical or urgent defect is open
-
-**Observe** when, for example:
-
-- a defect is open
-- a high-priority task is open
-- maintenance is due within the next 30 days
-
-**Good** when no matching action is currently required.
-
-The automatic system health never overwrites the user's manual assessment.
+Automatic health does not overwrite the user's manual assessment.
 
 ## Finances
 
-The finance module supports:
+The finance area supports:
 
-- income
-- expenses
+- income and expenses
 - recurring contracts
 - monthly and yearly costs
-- common household/private categories
-- assignment to assets
-- assignment to floors, rooms, areas or components
+- categories
+- asset and component assignment
 - filters by asset and sub-area
 - monthly totals and balance
 
-The finance module is intended as a personal overview and is not a replacement for full accounting software.
+It is intended as a personal overview and is not a replacement for full accounting software or professional tax advice.
 
 ## Documents and local OCR
 
-Documents can be uploaded, assigned to assets and analyzed locally.
+Documents can be uploaded, assigned to assets, viewed and downloaded again.
 
 Supported formats include:
 
@@ -558,25 +535,17 @@ Supported formats include:
 - TXT
 - CSV
 - DOCX
+- XLSX
 
-When a document is selected, the local analysis can suggest:
+Local document analysis can suggest metadata and categories. Suggestions are never applied silently and remain editable before saving.
 
-- title
-- document date
-- category
-- asset assignment
-
-All suggestions remain editable.
-
-Analysis runs locally in the backend using **Tesseract** and **Poppler**. Document contents are not sent to external OCR or AI services.
+OCR and PDF text extraction run locally using **Tesseract** and **Poppler**. Document contents are not sent to external AI or OCR services for this process.
 
 ## Telegram reminders
 
-Telegram is configured under:
+Telegram is configured under **Settings & Backup → Integrations → Telegram**.
 
-**Settings & Backup → Integrations → Telegram**
-
-The UI provides:
+Available settings include:
 
 - bot token
 - activation
@@ -585,51 +554,72 @@ The UI provides:
 - recipients / chat IDs
 - reminder types per recipient
 
-The bot token is stored locally in encrypted form and is not returned in plaintext after saving.
+The bot token is stored locally in protected form and is not returned in plaintext after saving.
 
-The `reminder-worker` checks reminders automatically using the selected interval.
-
-Telegram intentionally receives counts only, such as:
-
-- tasks/maintenance
-- contract expirations
-- document reminders
-
-It does not receive:
-
-- asset names
-- addresses
-- financial amounts
-- tax data
-- document contents
-
-Duplicate reminders to the same recipient are suppressed per calendar day.
+The `reminder-worker` checks reminders automatically. Telegram is intentionally limited to information required for reminders; sensitive document, tax or financial content should not be sent.
 
 ## Backup and restore
 
-A ZIP backup can be created under **Settings & Backup**.
+maintenance.vik supports ZIP-based application backups with checksum verification.
 
-The backup contains application records and related documents/images.
+A backup can be created through the web interface or on Windows using:
 
-Before restore, maintenance.vik validates:
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\scripts\Backup.ps1' -Credential (Get-Credential -UserName 'admin')"
+```
 
-- backup version
-- record relationships
-- document references
-- checksums
+If the administrator account uses a different username, enter that username in the credential dialog.
 
-A restore replaces the current data set of the selected installation.
+The script:
 
-Always keep a separate current backup before performing a production restore.
+- exports application data
+- validates the backup manifest
+- verifies included documents
+- creates a SHA-256 checksum
+- does not modify or import data
+
+Always keep an additional independently stored backup before a production restore.
 
 Large offline backup helpers are also available:
 
 - `scripts/Backup-Large.ps1`
+- `scripts/Verify-LargeBackup.ps1`
 - `scripts/Restore-Large.ps1`
+
+## Safe test environment
+
+Destructive restore or browser tests must never run against the normal installation.
+
+Create an isolated test checkout with:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\Prepare-TestEnvironment.ps1"
+```
+
+The script checks, among other things:
+
+- current `main` branch
+- clean Git working tree
+- an existing verified backup
+- stale Docker test containers and volumes
+- a separate target directory
+
+Start the test installation using its own Compose project name:
+
+```powershell
+cd "C:\Maintenance.vik\maintenance.vik-test"
+docker compose -p maintenance-vik-test up -d --build --wait
+```
+
+By default it is available at:
+
+```text
+http://localhost:3100
+```
 
 ## Installation using prebuilt Docker images
 
-`docker-compose.release.yml` is intended for the final v1.0 installation path without requiring a local Node.js or Python build.
+`docker-compose.release.yml` is intended for installations that should not require a local Node.js or Python build.
 
 ```powershell
 docker compose -f docker-compose.release.yml pull
@@ -643,15 +633,13 @@ POSTGRES_PASSWORD=<your own strong password>
 APP_PORT=3000
 ```
 
-`MAINTENANCE_VIK_VERSION` can be used to select a specific release tag.
+`MAINTENANCE_VIK_VERSION` can later be used to select a specific release tag.
 
-Example after v1.0 has been released:
+Example after v1.0.0 is published:
 
 ```text
 MAINTENANCE_VIK_VERSION=v1.0.0
 ```
-
-**Note:** `v1.0.0` has not been released yet.
 
 ## Development and testing
 
@@ -688,18 +676,20 @@ docker compose logs --tail=100
 
 The frontend is bound to `127.0.0.1` by default.
 
-For access from other devices, use a protected path such as:
+For access from other devices, use a protected route such as:
 
 - VPN
-- Tailscale or a similar private network
+- Tailscale or a comparable private network
 - HTTPS reverse proxy
 
 Do not expose the database or backend ports directly to the internet.
 
-Secrets such as the PostgreSQL password and Telegram bot token should never be committed to Git or posted in public screenshots or support requests.
-
----
+Secrets such as PostgreSQL passwords or Telegram bot tokens must never be committed to Git or included in public screenshots or support requests.
 
 ## License
 
-No license has been declared yet. Until a license is added, normal copyright rules apply.
+maintenance.vik is released under the **MIT License**.
+
+The code may be used, modified and redistributed under the terms of the license. The copyright and license notice must be retained.
+
+See [LICENSE](LICENSE).
