@@ -9,6 +9,18 @@ $projectPath = [IO.Path]::GetFullPath($project)
 if ($targetPath.TrimEnd('\', '/') -ieq $projectPath.TrimEnd('\', '/')) { throw 'Das Testziel darf nicht der Projektordner sein.' }
 if (Test-Path -LiteralPath $targetPath) { throw "Testziel existiert bereits; keine Dateien werden überschrieben: $targetPath" }
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'Git fehlt.' }
+if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw 'Docker CLI fehlt; vorhandene Testressourcen können nicht sicher geprüft werden.' }
+
+# Ein neuer Checkout allein garantiert keine leere Testumgebung: Docker kann alte
+# Container/Volumes mit demselben Compose-Projektnamen wiederverwenden.
+$existingContainers = (& docker ps -a --filter 'name=maintenance-vik-test-' --format '{{.Names}}' 2>&1 | Out-String).Trim()
+if ($LASTEXITCODE -ne 0) { throw 'Docker-Testressourcen konnten nicht geprüft werden. Bitte Docker Desktop starten.' }
+$existingVolumes = (& docker volume ls --filter 'name=maintenance-vik-test_' --format '{{.Name}}' 2>&1 | Out-String).Trim()
+if ($LASTEXITCODE -ne 0) { throw 'Docker-Testvolumes konnten nicht geprüft werden.' }
+if ($existingContainers -or $existingVolumes) {
+    throw "Alte Docker-Testressourcen gefunden. Testumgebung nicht angelegt. Zuerst gezielt 'docker compose -p maintenance-vik-test down -v' für die alte TESTinstanz ausführen und danach erneut prüfen."
+}
+
 $branch = (& git -C $projectPath branch --show-current | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $branch -ne 'main') { throw 'Bitte zuerst den Hauptbranch main auschecken.' }
 $changes = (& git -C $projectPath status --porcelain | Out-String).Trim()
