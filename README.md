@@ -4,6 +4,9 @@
 
 [Website](https://owa-labs.vercel.app/) · [Issues](https://github.com/scncvk19/maintenance.vik/issues) · [Discord](https://discord.gg/VQhcZdJWTX)
 
+<p><img src="https://owa-labs.vercel.app/images/projects/maintenance-vik/Dashboard.png" alt="maintenance.vik – Übersicht mit Assets und anstehenden Aufgaben" width="850"></p>
+<p><img src="https://owa-labs.vercel.app/images/projects/maintenance-vik/Finanzen.png" alt="maintenance.vik – Finanzübersicht" width="850"></p>
+
 **Version:** `1.0.0-rc.1`  
 **Status:** Release Candidate – functional acceptance tests completed successfully.
 
