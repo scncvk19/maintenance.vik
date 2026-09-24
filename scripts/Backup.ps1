@@ -28,18 +28,48 @@ try {
     $name = 'maintenance-vik-{0}-{1}.zip' -f (Get-Date -Format 'yyyyMMdd-HHmmss'), ([guid]::NewGuid().ToString('N').Substring(0, 8))
     $final = Join-Path $target $name
     $temporary = Join-Path $target ('.' + $name + '.partial')
-    $uri = 'http://127.0.0.1:{0}/api/backup/export' -f $port
+    $baseUri = 'http://127.0.0.1:{0}' -f $port
+    $uri = $baseUri + '/api/backup/export'
     $request = @{ Uri = $uri; OutFile = $temporary; UseBasicParsing = $true; TimeoutSec = 180 }
+
     if ($null -ne $Credential) {
-        if ($Credential.UserName -ne 'admin') { throw 'Fuer das Backup den Benutzernamen admin verwenden.' }
-        $credentials = 'admin:' + $Credential.GetNetworkCredential().Password
-        $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($credentials))
-        $request['Headers'] = @{ Authorization = 'Basic ' + $encoded }
+        $password = $Credential.GetNetworkCredential().Password
+        $webSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+        $loginSucceeded = $false
+        $loginResponse = $null
+        try {
+            $loginBody = @{ username = $Credential.UserName; password = $password } | ConvertTo-Json -Compress
+            $loginResponse = Invoke-RestMethod -Uri ($baseUri + '/api/auth/login') -Method Post -Body $loginBody -ContentType 'application/json' -WebSession $webSession -TimeoutSec 30
+            $loginSucceeded = $true
+        }
+        catch {
+            $loginSucceeded = $false
+        }
+
+        if ($loginSucceeded) {
+            if ($loginResponse.role -ne 'admin') {
+                throw 'Backup ist nur mit einem Administratorkonto erlaubt.'
+            }
+            $request['WebSession'] = $webSession
+        }
+        elseif ($Credential.UserName -eq 'admin') {
+            # Kompatibilitaet fuer bestehende Installationen mit APP_AUTH_PASSWORD.
+            $credentials = 'admin:' + $password
+            $encoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($credentials))
+            $request['Headers'] = @{ Authorization = 'Basic ' + $encoded }
+        }
+        else {
+            throw 'Anmeldung fehlgeschlagen. Bitte Benutzername und Passwort des Administratorkontos pruefen.'
+        }
     }
+
     try { Invoke-WebRequest @request | Out-Null }
     catch {
         if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 401) {
-            throw 'Backup-Zugriff gesperrt. Mit -Credential (Get-Credential -UserName admin) erneut starten.'
+            throw 'Backup-Zugriff gesperrt. Mit -Credential (Get-Credential -UserName <Adminname>) erneut starten.'
+        }
+        if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 403) {
+            throw 'Backup ist nur mit einem Administratorkonto erlaubt.'
         }
         throw
     }
