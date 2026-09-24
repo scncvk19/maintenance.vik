@@ -1,5 +1,9 @@
 # maintenance.vik
 
+**Self-hosted maintenance and asset management for buildings, vehicles, equipment, and recurring tasks.**
+
+[Website](https://owa-labs.vercel.app/) · [Issues](https://github.com/scncvk19/maintenance.vik/issues) · [Discord](https://discord.gg/VQhcZdJWTX)
+
 **Version:** `1.0.0-rc.1`  
 **Status:** Release Candidate – functional acceptance tests completed successfully.
 
