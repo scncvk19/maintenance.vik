@@ -66,6 +66,15 @@ Während der Abschlussprüfung wurden zusätzlich der Backup-Login für die aktu
 
 Der Stand ist für die Veröffentlichung des Quellcodes vorbereitet. `v1.0.0` ist noch nicht als finaler Release-Tag veröffentlicht.
 
+### Noch vor `v1.0.0`
+
+Vor dem finalen Release sind noch zwei gezielte Sicherheits-Härtungen vorgesehen:
+
+- **Next.js aktualisieren:** von `16.3.4` auf mindestens `16.3.6` oder eine neuere geprüfte Version.
+- **Druckansicht des Steuerbereichs härten:** benutzereditierbare Texte in der Checklisten-/Druckfunktion vor der Ausgabe über `document.write()` HTML-sicher escapen, um eine mögliche Script-/HTML-Injection zu vermeiden.
+
+Nach diesen Änderungen werden die Frontend-, Docker- und Funktionstests erneut ausgeführt.
+
 ## Architektur
 
 | Bereich | Technik |
@@ -408,6 +417,15 @@ Successfully verified areas include:
 During the final acceptance pass, backup authentication for the current local user system and safeguards against accidentally reusing stale Docker test volumes were also improved.
 
 The source tree is prepared for public release. A final `v1.0.0` release tag has not been published yet.
+
+### Still planned before `v1.0.0`
+
+Two targeted security-hardening tasks remain before the final release:
+
+- **Update Next.js:** from `16.3.4` to at least `16.3.6` or a newer verified version.
+- **Harden the tax-area print view:** HTML-escape user-editable checklist/print values before passing them to `document.write()` to prevent possible script/HTML injection.
+
+Frontend, Docker and functional tests will be run again after these changes.
 
 ## Architecture
 
